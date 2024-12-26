@@ -1,0 +1,45 @@
+﻿v1.2 1041224
+CAUSALFound - Inference and Utility
+________________
+
+
+(1) Real-Time Clinical Inference Framework. The deployment of CAUSALFound in clinical settings requires an inference framework that balances computational efficiency with prediction accuracy while maintaining appropriate uncertainty quantification. This section outlines the key components and considerations for clinical deployment.
+
+
+Real-Time Inference Architecture
+CAUSALFound will have a multi-stage inference architecture, aiming to generate meaningful clinical predictions from EHR data. Data will be extracted and normalised maintaining temporal alignment of features to preserve chronological integrity of patient histories. Missing data will be imputed, potentially using methods such as GAIN (Generative Adversarial Networks (GANs) for imputation), which are rapid and accurate in this context.
+
+
+The next step focuses on intervention specification (specification of conditional features representing potential counterfactual scenarios). Drug combinations, dosage regimens, and treatment sequences will encoded (constrained by contraindications and clinical guidelines). This ensures that the model predictions are grounded in established medical practice while providing the flexibility to adapt to complex treatment scenarios.
+
+
+The final stage is the generation of effect size predictions. CAUSALFound produces multi-outcome predictions, quantifying uncertainties and contextualising results within population-level and subgroup-specific calibrations. This approach not only supports individual patient care but also allows investigation of how treatment effects may vary across populations.
+
+
+________________
+
+
+(2)        Clinical Applications and Use Cases. CAUSALFound enables several key clinical applications:
+
+
+Personalized Treatment Selection: By predicting individual responses to potential therapies, CAUSALFound enables clinicians to optimise drug selection, dosing, and treatment sequences. The model also facilitates comparative effectiveness analyses, helping to evaluate head-to-head treatment options, combination therapies, and their cost-effectiveness.
+Risk Stratification and Monitoring: The system will dynamically assess patient risk, generating predictions that inform early warnings, intervention timing, and monitoring schedules. It can also support population health management by identifying high-risk patients, subgroups who may respond particularly well to specific agents, and optimizing resource allocation.
+
+
+Clinical Decision Support: CAUSALFound will act as a point-of-care assistant, generating treatment recommendations, flagging contraindications, and checking for drug interactions. By integrating real-world evidence and communicating uncertainties, the system enhances the quality of clinical decision-making and adherence to evidence-based practices.
+
+
+(3) Value Proposition and Impact Assessment. CAUSALFound’s potential utility extends beyond its immediate clinical applications, offering significant benefits in terms of patient outcomes, healthcare economics, and research advancement:
+
+
+Clinical Outcomes: The framework aims to improve treatment response rates, reduce adverse events, and accelerate time to therapeutic goals, thereby improving clinical outcomes and potentially enhancing quality-of-life metrics for patients - even where there is a lack of direct clinical evidence from RCTs.
+
+
+Economic Impact: By optimising treatment pathways, preventing adverse events, CAUSALFound has the potential to contribute to direct cost savings. Indirectly, the system may enhance workflow efficiency, and support risk management, contributing to long-term cost-effectiveness.
+
+
+Research and Development: CAUSALFound will assist in optimising clinical trial design, including patient selection and endpoint identification. There are a wide range of clinical questions that might be tackled using this method.
+
+
+(4) Future Extensions and Adaptations
+CAUSALFound is designed with scalability and adaptability in mind. Future iterations may expand into new therapeutic domains, including rare disease. Enhanced functionality could incorporate multi-modal data integration, such as images, genomic or environmental factors, to enrich the predictive capabilities of the system. The architecture will support continuous learning and automated validation, ensuring sustained performance and relevance in evolving clinical contexts.

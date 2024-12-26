@@ -1,0 +1,36 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+CAUSALFound: A Foundation Model for Causal Inference and Personalised Treatment Effect Prediction
+</title>
+
+<associated label>
+@CAUSALFound
+</associated label>
+
+<context>
+the context, along with high- and low-level plans for this project are contained within the following documents:
+CAUSALFound_proposal_1_overview.txt
+CAUSALFound_proposal_2_methods_in_detail.txt
+CAUSALFound_proposal_3_inference_utility.txt
+CAUSALFound_4_prose_summary.txt
+</context>
+
+<current status>
+functionally I have divided this project up into the following sections:
+1. combination generation: this is underway. I have written code that will generate all possible combinations of a number of continuous and categorical features. some additional work required to work out how to summarise past medication history etc
+2. synthetic data generation: the VAE method is complete. Struan is writing up at present, with a draft now available - summarised in vae_method.txt. we need to implement CTGAN and a diffusion method (being implemented by Rob Nagy).
+3. TTE: Xander is working on translating the TrialEmulation R package into python
+4. manifold: not yet started
+5. Foundation Model training: not yet started
+Overall -> start building pipeline linking steps: not yet started
+</current status>
+
+<task_notes>
+medium term goal will be to chain together sections 1, 2 and 3.
+once this is done we can start work on the manifold.
+the foundation model training should be relatively straightforward.
+</task_notes>

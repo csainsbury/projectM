@@ -1,0 +1,23 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+Implementation of risk prediction models in a non-diabetes cohort within NW London
+</title>
+
+<associated label>
+@NWLondon_data
+</associated label>
+
+<context>
+we have access to all GP records from the unselected population of NW London
+the aim will be to apply the current generation of risk prediction models (probably XGBoost based models described in the Dundee_Colab project documents) to people without diabetes.
+could also aim to predict the development of diabetes (considering the potential new agents being tested in early-phase studies currently)
+</context>
+
+<current status>
+slow progress
+there is a form that I need to finalise and send off (in task list inbox.csv)
+</current status>

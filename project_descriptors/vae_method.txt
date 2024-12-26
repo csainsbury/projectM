@@ -1,0 +1,458 @@
+Med-VAE: Improving Medical Research Access
+Through Privacy-Preserving Synthetic Patient Data
+Struan Hogg1∗†, Dr Chris Sainsbury2†
+Healthcare data constitutes a rich but largely untapped resource for medi-
+cal advancement, protected from exploitation by necessary privacy safeguards.
+A promising approach is to train a machine learning model to produce synthetic
+data, which closely resembles the real dataset but preserves the privacy of pa-
+tients. We present Med-VAE, a novel variational autoencoder that enhances the
+classic VAE architecture using KL scaling, KL annealing and batch normaliza-
+tion, designed specifically for medical data synthesis with conditional generation
+capabilities.
+In evaluations against leading synthetic data generators from the Synthetic
+Data Vault framework, Med-VAE demonstrated improved performance, achiev-
+ing 96.71% preservation of pair-wise relationships compared to T-VAE’s 90.43%.
+In practical utility testing using an XGBoost classifier, synthetic data generated
+by Med-VAE surpassed SDV’s models to achieve an accuracy of 0.86 ± 0.01,
+approaching the real data baseline of 0.88. While limitations include reduced reli-
+ability for rare conditions and imperfect differential privacy, Med-VAE represents
+a modest advancement in tabular medical data synthesis, offering new possibilities
+for privacy-preserving data sharing in healthcare research.
+Healthcare data is a vital resource for advancing medical research and improving patient care, yet
+privacy concerns and regulatory requirements create significant barriers to data sharing (1). This
+paper will focus on tabular healthcare data - structured information typically stored in databases
+and spreadsheets that captures patient demographics, diagnoses, treatments, and outcomes. While
+1
+such data is fundamental for developing artificial intelligence (AI) and machine learning (ML)
+applications in healthcare, privacy regulations like HIPAA in the United States and GDPR in
+Europe strictly limit its distribution and use (2, 3). This has created a need for methods that can
+enable data sharing while protecting patient privacy (4).
+Synthetic data generation has emerged as a promising solution to this challenge (1). Synthetic
+data refers to artificially generated information that maintains the statistical properties and relation-
+ships present in real data. The advantage is that each synthetic datapoint does not correspond to a
+person in the original dataset. In healthcare, synthetic data can serve multiple purposes: including
+the enabling software development and testing without privacy risks, augmenting limited datasets
+for rare conditions, and facilitating the training of machine learning models (5–7).
+The Synthetic Data Vault (SDV) has established itself as an extremely popular (8–12) open-
+source framework for generating synthetic tabular data in the healthcare domain, providing a
+standardized set of tools and metrics for data synthesis and evaluation. Originally developed at
+MIT, it provides open access to models for generating synthetic data, and provides a standardized
+set of tools and metrics for data synthesis and evaluation (13).
+However, generating high-quality synthetic healthcare data presents significant challenges. The
+data must simultaneously preserve complex relationships between variables, maintain clinical
+realism, and ensure statistical utility while providing robust privacy guarantees. Current methods,
+including those in the SDV framework, often struggle to balance privacy protection with data utility,
+and many fail to adequately capture the intricate dependencies between medical variables that are
+crucial for clinical applications.
+Variational autoencoders (VAEs) represent a promising approach for synthetic data generation
+because they avoid the mode-collapse problem of Generative Adversarial Networks (14). VAEs are
+neural networks which learn to compress input data into a compact representation called a latent
+space, then use this compressed information to reconstruct the input data as closely as possible (15).
+The latent space is constrained through Kullback-Leibler (KL) divergence, which measures how
+closely the learned representation matches a desired probability distribution (16). This constraint
+allows for the generation of novel synthetic data that maintains similar statistical properties to the
+training data.
+In this paper, we present Med-VAE, a VAE-based architecture specifically developed to generate
+2
+Figure 1: Simple schematic of a variational autoencoder. The encoder network compresses input
+data into a latent space representation, while the decoder attempts to reproduce the input data.
+synthetic medical tabular data, with a focus on diabetes applications. Med-VAE incorporates several
+useful features for medical data generation.
+Notably, it enables conditional generation - the ability to generate synthetic data meeting
+specific criteria such as particular patient characteristics or medical conditions. This could allow
+researchers to generate synthetic cohorts for rare conditions or model treatment effects on target
+patient subgroups.
+Our results show that Med-VAE achieves superior performance compared to existing synthetic
+data generators, particularly excelling in the preservation of pairwise relationships (96.71%) and
+practical utility for downstream machine learning tasks.
+The model employs several machine learning tricks to improve training performance, including
+batch normalization (17), beta kl-divergence (18) and kl annealing (19). These stabilise training,
+especially at higher learning rates, and allow it to avoid the ”posterior collapse” problem common
+in VAE architectures.
+3
+1 Methods
+1.1 Dataset Description and Environment
+This study analyzed data from the SCI Diabetes dataset (20), containing comprehensive diabetes
+care records from Scotland over a five-year period. The dataset includes 70,162 patient records
+with 68 clinical features, divided into training (n=56,130, 80%) and test (n=14,032, 20%) sets. The
+analysis was implemented in Python, with code and technical implementation details available at
+https://github.com/hogglet-rsc/Med-VAE. A more technical description of the Methods can also be
+found in the Supplementary Text.
+1.2 Data Preparation
+We prepared the patient data and processed using several steps to ensure consistency and quality.
+Clinical categorical variables (including foot risk, eye risk, diabetes type, smoking status, and
+ethnicity) were handled separately from numerical and binary variables for analysis. We excluded
+rarely prescribed medications (those prescribed to fewer than 10% of patients) to focus on common
+treatment patterns.
+Missing data were handled using multiple imputation with chained equations (MICE) (21),
+chosen after testing simpler approaches. We performed quality control checks to identify any data
+anomalies and normalized numerical values to a common scale to facilitate comparison.
+1.3 Model Architecture
+Detailed model architecture can be found in the Supplementary Text. The model works in three
+stages:
+1. An encoder network that processes patient information into a compact form
+2. A mechanism that creates variations of this compressed information
+3. A decoder network that reconstructs complete synthetic patient records
+The model incorporates several technical innovations to handle medical data. It processes dif-
+ferent types of medical information (such as categorical diagnoses and numerical test results)
+4
+appropriately and uses specialized techniques to maintain the relationships between different med-
+ical variables.
+1.4 Training and Validation
+We trained the model using an iterative process that optimizes its ability to generate realistic
+patient data. The training process was monitored and showed optimal performance at 200 complete
+iterations through the training set.
+To evaluate the model’s performance, we compared it against three leading synthetic data
+generators from the Synthetic Data Vault (SDV) framework: CT-GAN, Gaussian Copula, and
+T-VAE. All models were tested under identical conditions to ensure fair comparison.
+We assessed performance in two ways:
+1. Using the SDV quality assessment framework to measure how well the synthetic data pre-
+served statistical relationships from the original data
+2. Testing practical utility by using the synthetic data to predict patient age groups, comparing
+the results against predictions made with real patient data
+1.5 Synthetic Data Generation
+Med-VAE generates synthetic patient records through a systematic process designed to maintain
+medical realism. For any desired patient characteristic (such as specifying diabetes type to be type
+2 diabetes), the model:
+1. Analyzes patterns in real patient records with that characteristic
+2. Creates a statistical representation of these patterns
+3. Generates new synthetic records that follow these patterns while maintaining patient privacy
+5
+2 Results
+2.1 Model Performance and Validation
+2.1.1 Utility comparison with Existing Approaches
+We evaluated Med-VAE against three leading synthetic data generators from the SDV framework:
+CT-GAN, Gaussian Copula, and T-VAE. Performance was assessed through both practical utility
+metrics and statistical quality measures. For practical utility, we employed an XGBoost classifier
+(22) trained on synthetic data and tested on real data, with a baseline established by training on real
+data (accuracy 0.88).
+Figure 2 and Table 1 show that Med-VAE achieved peak performance at 200 epochs with an
+accuracy of 0.86 ± 0.01, outperforming T-VAE (0.83 ± 0.01), Gaussian Copula (0.81), and CT-GAN
+(0.78). Training runs were repeated four times for neural network-based models at 100, 200, and
+300 epochs, while Gaussian Copula was run four times to establish confidence intervals. At 300
+epochs, Med-VAE showed increased variance in outcomes, with mean performance converging to
+T-VAE levels (0.83 ± 0.01).
+Model Accuracy (95% CI)
+Real →Real 0.879 (0.877, 0.881)
+1. Med-VAE 0.858 (0.849, 0.867)
+2. TVAE 0.834 (0.826, 0.841)
+3. Gaussian Copula 0.808 (0.805, 0.812)
+4. CTGAN 0.780 (0.766, 0.793)
+Table 1: Model accuracy comparison at 200 epochs. Real→Real represents baseline performance
+using real training data.
+2.1.2 Quality Assessment Metrics
+Table 2 provides a summary of comparison of these four models using SDV’s own quality metrics
+(23). At 200 epochs, Med-VAE achieved the highest overall quality score (93.33%), followed
+by T-VAE (90.43%), Gaussian Copula (87.72%), and CT-GAN (86.78%). Notably, Med-VAE
+6
+Figure 2: Performance comparison of XGBoost classifiers trained on synthetic data generated by
+different models. Each subplot emphasizes one model (Med-VAE, CTGAN, or TVAE) with its
+confidence band. All models were trained on 8,000 samples, tested on 2,000 real held-out test
+patients and compared against a baseline classifier trained on real data (gray band). The Gaussian
+Copula baseline is shown in yellow. Med-VAE achieves the highest accuracy (0.86 ± 0.01) at 200
+epochs, approaching the real data baseline (0.88).
+7
+demonstrated strong preservation of pair-wise relationships (96.71%), suggesting robust capture of
+underlying data patterns.
+Model Overall Score Column Shapes Pair Trends
+Med-VAE 0.933 0.899 0.967
+TVAE 0.904 0.872 0.936
+Gaussian Copula 0.877 0.816 0.939
+CTGAN 0.868 0.797 0.938
+Table 2: Quality assessment scores for different synthetic data generation models. Models are
+evaluated on overall performance, column shape preservation, and pair-wise trend matching. Highest
+scores in each category are shown in bold.
+2.2 Statistical Fidelity Analysis
+2.2.1 Distribution Comparison
+To assess statistical fidelity, we generated 10,000 synthetic datapoints and compared them against
+an equal number of real datapoints from the held-out test set.
+Density plots comparing real and synthetic data distributions revealed strong alignment across
+features, with synthetic distributions (orange) closely matching real data patterns (blue) [Figure 3].
+2.2.2 Key Statistical Metrics
+For a more quantitative assessment of similarity between the distributions, we calculated four
+distribution metrics: mean, standard deviation, kurtosis (a measure of distribution asymmetry) and
+skewness (a measure of outlier prevalence) (24) . These are summarised in table 3.
+The close alignment of these metrics, particularly mean and skewness, demonstrates Med-
+VAE’s ability to capture both central tendencies and distribution shapes. The slightly lower standard
+deviation and kurtosis in synthetic data suggest a minor tendency toward more conservative value
+ranges.
+8
+Figure 3: Density distribution comparison between real patient data (blue) and synthetic data
+generated by Med-VAE (orange). The close alignment of the distributions demonstrates Med-
+VAE’s ability to capture the underlying statistical patterns in the original dataset.
+Metric Test Set Synthetic Data
+Mean 24.81 24.89
+Standard Deviation 11.56 10.95
+Kurtosis 6.48 5.83
+Skewness 1.52 1.53
+Table 3: Comparison of statistical metrics between test set and synthetic data.
+2.2.3 Feature Correlation Analysis
+Med-VAE’s strong performance in pair-matching (96.71%) was visually confirmed using feature-to-
+feature correlation plots, showing preserved higher-level relationships between numerical features
+that are crucial for maintaining the data’s predictive utility.
+9
+Figure 4: Pairwise comparisons of five randomly selected numerical features. Real data is blue and
+synthetic data is orange.
+10
+2.3 Conditional Generation Performance
+2.3.1 Generation Success Rates
+Med-VAE demonstrated robust conditional generation capabilities across various medical parame-
+ters, though performance varied with condition frequency in the training data. Common conditions
+such as Type 1 and Type 2 diabetes, standard smoking statuses, and major ethnic groups achieved
+100% generation fidelity. However, rare conditions like MODY and minority subgroups showed
+lower reliability in conditional generation.
+2.3.2 Medication Prescription Analysis
+Medication prescription status presented unique challenges due to Med-VAE’s continuous mod-
+eling of prescription quantities. When generating data with specific prescription conditions (e.g.,
+”SGLT2 inhibitors not prescribed”), the model produced distributions clustered near zero but not
+always strictly within the binary classification threshold ( 0.5 for ”not prescribed”). This contin-
+uous representation, while introducing some ambiguity in strict binary classification, potentially
+preserves richer information about prescription patterns for practical utility.
+Detailed success rates for conditional generation across various parameters are provided in the
+Supplementary Text.
+3 Discussion
+The development and validation of Med-VAE represents a modest step forward in addressing the
+challenge of generating high-quality synthetic medical data. Our results demonstrate that Med-VAE
+outperforms existing synthetic data generation approaches and offers practical utility for medical
+research applications, as well as the ability to generate condition-specific patient cohorts.
+The improved performance of Med-VAE compared to established SDV models (CT-GAN,
+Gaussian Copula, and T-VAE) suggests that our architectural design choices are helpful for medical
+data synthesis. Noteworthy is Med-VAE’s preservation of pair-wise relationships (96.71%), which is
+crucial for maintaining the complex interdependencies characteristic of medical data. This capability
+ensures that generated synthetic data captures not just individual variable distributions but also the
+11
+subtle correlations between medical parameters that are essential for clinical validity.
+This conclusion was supported by our practical utility test, in which Med-VAE achieved an
+accuracy of 0.86 ± 0.01. When compared to the real data baseline of 0.88, this indicates that
+synthetic data generated by our model may be able to stand in for real patient data in machine
+learning applications. This could potentially enable broader data sharing and collaboration while
+maintaining patient privacy.
+The model’s conditional generation capabilities are important for practical utility. The ability
+to generate synthetic cohorts with specific characteristics could be used to augment data for rare
+conditions or specific patient subgroups, where paucity of data often limits study design and statis-
+tical power. However, the observed variation in generation fidelity based on condition frequency in
+the training data highlights a limitation of this approach. While common conditions achieved 100%
+generation fidelity, the lower reliability in generating rare conditions suggests that Med-VAE’s
+utility for modelling rare diseases is hindered by current scarcity of training data.
+Several other limitations warrant discussion. First, the continuous modeling of prescription
+quantities, while providing richer information about prescription patterns, introduces some ambi-
+guity in strict binary classification tasks. For use in virtual trials, a user of Med-VAE must be able
+to state clearly whether a drug has been prescribed or not and receive consistent data. In addition,
+several approaches were trialed to specify multiple conditions at once (e.g. metformin prescribed
+but beta blockers not prescribed). Future work should evaluate the utility of conditional data for each
+condition using SDV’s metrics and tests of practical utility, as well as working to make sure that
+prescription status can be reliably specified when generating synthetic data. Once these two have
+been completed, multi-condition generation approaches would be a useful next step in applying
+Med-VAE to virtual clinical trials.
+The slightly lower standard deviation in synthetic data compared to real data indicates a minor
+tendency toward more conservative value ranges. While this difference is minimal, it suggests that
+Med-VAE may currently slightly underrepresent extreme cases. Standard deviation of the synthetic
+data fell from parity with the real data as the overall quality of the data improved, and further work
+could explore the reason for this.
+Another important direction for future work involves the integration of formal privacy guar-
+antees through differential privacy mechanisms (25). Our preliminary investigations in this area
+12
+have yielded some insights. Initial experiments using differentially private stochastic gradient de-
+scent (DP-SGD) (26) with careful privacy budget calculation () (27) demonstrated the expected
+asymptotic relationship between privacy guarantees and utility, as shown in Figure 5.
+Figure 5: Privacy-utility trade-off showing the asymptotic relationship between privacy guarantee
+(𝜖) and model utility. Smaller 𝜖 values indicate stronger privacy but result in reduced utility, with
+performance converging at higher 𝜖 values.
+While the current implementation achieves a maximum accuracy of 0.62, compared to 0.86 with
+the non-private version, this discrepancy is not attributable to the differentially private optimizer
+itself. Rather, it stems from necessary modifications to data structure and model architecture made
+to accommodate the privacy-preserving optimizer. Future work must focus on harmonizing these
+elements between the base model and its differentially private variant. Once this has been completed,
+at high 𝜖 values the differentially private model should asymptote to the quality of the current non-
+private base model. This would enable a user of the differentially private model to make precise
+the following trade-off: how much sacrifice in data quality is necessary for a given privacy need.
+A further promising direction for addressing this privacy-utility trade-off involves using a frozen
+pre-trained encoder and applying differential privacy only during decoder training (28). By lever-
+aging the post-processing theorem of differential privacy, this approach could potentially maintain
+privacy guarantees while minimizing the impact on synthetic data quality. This architectural mod-
+13
+ification, combined with further optimization of privacy parameters such as noise multiplier and
+batch size, could provide users with flexible privacy controls – allowing them to choose stronger
+privacy guarantees for highly sensitive data or prioritize utility for less sensitive applications.
+Beyond privacy considerations, several other avenues warrant investigation. Improving the
+generation of rare conditions, possibly through targeted oversampling or architectural modifications,
+could enhance the model’s utility for rare disease research. Additionally, extending the model to
+handle temporal medical data and longitudinal patient records could significantly broaden its
+applications in clinical research.
+Future research should also investigate the model’s performance on diverse medical datasets
+beyond diabetes care, as well as its potential for cross-institution data synthesis. The current
+results, while promising, are based on a single, albeit very comprehensive medical dataset. Our
+dataset contains every diabetic patient in Scotland, so should generalise well to diabetics in nearby
+countries, but the model should also be trained and tested on different patient populations. Validating
+Med-VAE’s performance across different medical domains and data sources would strengthen its
+credibility as a general-purpose tool for medical data synthesis.
+The relationship between training data size and synthetic data quality also merits further
+investigation. Understanding these scaling properties could help establish guidelines for minimum
+dataset sizes required for reliable synthetic data generation, particularly for conditional generation
+tasks. This understanding becomes especially crucial when balancing privacy requirements with
+data utility, as privacy-preserving techniques often require larger training datasets to maintain
+practical utility with privacy constraints.
+4 Conclusions
+In this paper, we presented Med-VAE, a variational autoencoder architecture adapted for medical
+data synthesis. Our evaluation shows that Med-VAE offers modest improvements over existing
+approaches, particularly the similiar T-VAE, across several key metrics. The model achieved strong
+preservation of pair-wise relationships (96.71%) compared to T-VAE’s 90.43%, and demonstrated
+practical utility with synthetic data performance (0.86 ± 0.01) slightly exceeding that of T-VAE
+(0.83 ± 0.01) in downstream machine learning tasks.
+14
+Med-VAE’s conditional generation capabilities provide additional functionality for creating
+synthetic cohorts with specific medical characteristics. This feature performs well for common
+conditions, though its effectiveness varies with condition frequency in the training data. The
+model’s ability to maintain statistical relationships while enabling targeted data generation could
+prove useful for medical research applications, particularly in cases where specific patient cohorts
+are needed for analysis.
+Since SDV’s models are widely used in healthcare, this improvement in performance suggests
+that Med-VAE could be developed for potential applications in medical research. The model’s
+ability to preserve both global distributions and local variable relationships indicates its viability
+for generating synthetic datasets that approximate real patient data.
+Looking ahead, the integration of formal privacy guarantees through differential privacy mech-
+anisms represents an important next step in development.
+Additionally, extending the model’s capabilities to handle temporal medical data and improving
+its performance with rare conditions could enhance its utility. These developments, combined with
+validation across diverse medical datasets and institutions, would help establish the model’s broader
+applicability for medical data synthesis.
+Med-VAE contributes to the ongoing development of tools for addressing data access challenges
+in medical research while maintaining patient privacy. As healthcare continues to embrace AI and
+machine learning applications, incremental improvements in synthetic data generation techniques
+help advance the field while protecting patient confidentiality.
+15
+References and Notes
+1. M. Giuffr` e, D. L. Shung, Harnessing the power of synthetic data in healthcare: innovation,
+application, and privacy. NPJ Digit. Med. 6 (1), 1–8 (2023).
+2. W. Moore, S. Frye, Review of HIPAA, part 1: History, protected health information, and privacy
+and security rules. J. Nucl. Med. Technol. 47 (4), 269–272 (2019).
+3. D. Xiang, W. Cai, Privacy protection and secondary use of health data: Strategies and methods.
+Biomed Res. Int. 2021, 1–11 (2021).
+4. A. Gonzales, G. Guruswamy, S. R. Smith, Synthetic data in health care: A narrative review.
+PLOS Digit. Health 2 (1), e0000082 (2023).
+5. A. Kiran, S. S. Kumar, A comparative analysis of GAN and VAE based synthetic data generators
+for high dimensional, imbalanced tabular data, in 2023 2nd International Conference for
+Innovation in Technology (INOCON) (IEEE) (2023), pp. 1–6.
+6. J.-F. Rajotte, et al., Synthetic data as an enabler for machine learning applications in medicine.
+iScience 25 (11), 105331 (2022).
+7. I. Al-Dhamari, H. Abu Attieh, F. Prasser, Synthetic datasets for open software development in
+rare disease research. Orphanet J. Rare Dis. 19 (1) (2024).
+8. M. Miletic, M. Sariyar, Challenges of using synthetic data generation methods for tabular
+microdata. Appl. Sci. (Basel) 14 (14), 5975 (2024).
+9. P. Yadav, et al., Rigorous experimental analysis of tabular data generated using TVAE and
+CTGAN. Int. J. Adv. Comput. Sci. Appl. 15 (4) (2024).
+10. A. Koloi, et al., A comparison study on creating simulated patient data for individuals suffering
+from chronic coronary disorders, in 2023 45th Annual International Conference of the IEEE
+Engineering in Medicine & Biology Society (EMBC) (IEEE) (2023), pp. 1–4.
+11. S. Kumi, M. Hilton, C. Snow, R. K. Lomotey, R. Deters, SleepSynth: Evaluating the use of
+synthetic data in health digital twins, in 2023 IEEE International Conference on Digital Health
+(ICDH) (IEEE) (2023), pp. 121–130.
+16
+12. C. Jain, C. Judge, #5490 generative artificial intelligence for creation of synthetic hypertension
+trial data. Nephrol. Dial. Transplant 38 (Supplement 1) (2023).
+13. N. Patki, R. Wedge, K. Veeramachaneni, The synthetic data vault, in 2016 IEEE International
+Conference on Data Science and Advanced Analytics (DSAA) (IEEE) (2016), pp. 399–410.
+14. Y. Kossale, M. Airaj, A. Darouichi, Mode collapse in generative adversarial networks: An
+overview, in 2022 8th International Conference on Optimization and Applications (ICOA)
+(IEEE) (2022), pp. 1–6.
+15. D. P Kingma, M. Welling, Auto-Encoding Variational Bayes (2013).
+16. S. Jonathon, Notes on Kullback-Leibler Divergence and Likelihood (2014).
+17. B. Johan, G. Carla, S. Bart, Q. W. Kilian, Understanding batch normalization (2018).
+18. Z. Wang, Addressing Posterior Collapse in Variational Autoencoders with 𝛽-VAE. Highlights
+in Science, Engineering and Technology 57, 161–167 (2023).
+19. I. Yuma, H. Koji, Learning dynamics in linear VAE: Posterior collapse threshold, superfluous
+latent space pitfalls, and speedup with KL annealing (2023).
+20. SCI-diabetes, https://www.sci-diabetes.scot.nhs.uk/, accessed: 2024-12-22.
+21. M. J. Azur, E. A. Stuart, C. Frangakis, P. J. Leaf, Multiple imputation by chained equations:
+what is it and how does it work? Int. J. Methods Psychiatr. Res. 20 (1), 40–49 (2011).
+22. C. Tianqi, G. Carlos, XGBoost: A Scalable Tree Boosting System (2016).
+23. Single table API, https://docs.sdv.dev/sdmetrics/reports/quality-report/
+single-table-api, accessed: 2024-12-22.
+24. H. Oja, On Location, Scale, Skewness and Kurtosis of Univariate Distributions. Scand. Stat.
+Theory Appl. 8 (3), 154–168 (1981).
+25. C. Dwork, A. Roth, The algorithmic foundations of differential privacy. Found. Trends Theor.
+Comput. Sci. 9 (3-4), 211–407 (2013).
+17
+26. Implement differential privacy with TensorFlow privacy, https://www.tensorflow.org/
+responsible_ai/privacy/tutorials/classification_privacy, accessed: 2024-12-
+22.
+27. Tf privacy.Compute dp sgd privacy statement, https://www.tensorflow.org/
+responsible_ai/privacy/api_docs/python/tf_privacy/compute_dp_sgd_
+privacy_statement, accessed: 2024-12-22.
+28. J. Dihong, et al., DP2-VAE: Differentially Private Pre-trained Variational Autoencoders (2022).
+18
+Supplementary Text
+Detailed Data Preparation and Model Architecture
+Patient data was imported and preprocessed to ensure consistent formatting across all features.
+Categorical variables (foot risk, eye risk, diabetes type, smoking status, and ethnicity) were encoded
+from one-hot encoding to ordinal values using OrdinalEncoder. Binary features, initially stored as
+boolean data types, were converted to integers. To maintain dataset quality, drugs prescribed at a
+rate of less than 10% were excluded from the analysis.
+Missing values were handled using multiple imputation with chained equations (MICE), which
+was selected after comparative testing against simpler approaches like median imputation with
+and without imputation flags. For the foot risk assessment scale, the highest risk category was
+standardized by remapping value ’4’ to ’3’, creating a final four-point scale (0-3).
+The dataset underwent thorough quality control, including scanning for infinite values, NaNs,
+and non-numeric columns. Gradient columns were removed due to noise from frequency-based
+measurements. An 80/20 train-test split was performed, and numerical features were scaled using
+MinMaxScaler. To verify data integrity post-processing, descriptive statistics (mean, standard
+deviation, kurtosis, and skewness) were calculated after scaling to ensure the data distribution
+remained unchanged.
+Model Implementation Details
+The variational autoencoder architecture was implemented with three main components. The en-
+coder processed categorical features through learned embeddings (three dimensions per category)
+before combining them with numerical and binary inputs. This combined input was passed through
+three neural network layers (88, 60, and 32 neurons respectively) with leaky ReLU activation func-
+tions, progressively compressing the information. Each layer incorporated batch normalization,
+which was retained after showing consistent performance improvements in architecture experi-
+ments.
+The encoder output parameters (mean and log variance) for a 32-dimensional latent space, where
+each dimension approximated a standard normal distribution. To ensure this normal distribution
+was achieved, KL divergence was employed in the loss function with an annealing schedule. The
+19
+annealing factor scaled linearly from 0 to 1 across training epochs, allowing the model to initially
+focus on reconstruction accuracy before gradually enforcing the distribution constraint.
+The decoder mirrored the encoder’s architecture in reverse, using three layers (32, 60, and 88
+neurons) with leaky ReLU activations and batch normalization. The final layer used appropriate
+activation functions for each feature type: sigmoid for binary features, softmax for categorical
+features, and linear activation for continuous variables.
+Training Process and Synthetic Data Generation
+The model was optimized using the Adam optimizer with a learning rate of 0.001. The loss function
+combined seven distinct reconstruction losses with calibrated weights: 100 for numerical features,
+1 for categorical features, and an optimized binary weight for binary features to ensure comparable
+initial loss magnitudes across terms.
+Data generation involved sampling from condition-specific latent space representations. For
+each medical condition, filtered training set data points were processed through the trained encoder
+to obtain latent space representations. These were stored as condition-specific libraries, maintaining
+the full distributional characteristics of the original cohort. Synthetic data generation began with
+random sampling from these stored tensor libraries, with each synthetic case derived from a
+randomly selected tensor providing statistical parameters for the 32 latent dimensions.
+The sampled latent vectors were processed through the decoder network, which reconstructed
+complete synthetic patient records. Continuous variables were produced directly from the decoder’s
+linear output layer, while binary and categorical variables were derived from their respective sigmoid
+and softmax outputs. This ensured that each synthetic record maintained appropriate value ranges
+and categorical distributions while preserving both global data distributions and condition-specific
+characteristics.
+20
+Figure 6: Detailed architecture of the Med-VAE encoder network. The encoder processes
+three types of input features: categorical (processed through embeddings), binary, and numerical
+variables. These are combined and passed through three neural network layers with leaky ReLU
+activations and batch normalization, ultimately producing mean and log variance parameters for
+the 32-dimensional latent space. Layer sizes are shown in parentheses.
+21
+Figure 7: Detailed architecture of the Med-VAE decoder network. The decoder mirrors the
+encoder structure in reverse, taking samples from the 32-dimensional latent space and reconstructing
+them through three neural network layers. The final layer uses type-specific activations: sigmoid
+for binary features, softmax for categorical features, and linear activation for continuous variables.
+Layer sizes are shown in parentheses.
+22
+Figure 8: Conditional generation accuracy matrix for clinical variables. Confusion matrix
+showing the success rates of conditional generation for diabetes type, smoking status, and med-
+ications. The ’unconditional’ row shows the natural distribution of each condition in standard
+generation.
+23
+Figure 9: Conditional generation accuracy matrix for ethnicity codes. Confusion matrix demon-
+strating the model’s accuracy in generating specific ethnicity codes. The first row shows the baseline
+distribution in unconditional generation, while subsequent rows show the accuracy when targeting
+specific ethnic codes.
+24

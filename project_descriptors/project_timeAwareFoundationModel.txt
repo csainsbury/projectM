@@ -1,0 +1,26 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+Chrono-CIGHT: A Time-Aware Multimodal Foundation Model for Longitudinal Retinal Image Analysis in People with Diabetes
+</title>
+
+<associated label>
+@chronoCIGHT
+</associated label>
+
+<context>
+see document: Chrono-CIGHT_working.txt
+</context>
+
+<current status>
+practically, the project is divided into 3 major sections:
+1 EHR time aware model. this is now based on the moment-1-large model and is working at a basic level
+2 development of a time aware retinal image model. this is at a planning stage with options being considered.
+3 integration into a high-level fusion of elements 1 and 2. Elements of planning and execution of 1 and 2 will be dependent on a successful fusion and training.
+</current status>
+
+<task_notes>
+</task_notes>

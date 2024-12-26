@@ -1,0 +1,861 @@
+   
+
+                           
+
+
+
+
+
+Project Initiation Document
+
+ PRESIDE:  Primary care led risk stratification and treatment escalation with SGLT2-I's using digital innovation in patients with Type 2 diabetes
+
+
+
+Version Control
+Title:
+PRESIDE PID
+Date:
+10-Jun-2024
+Version:
+0.9
+Reason for last change:
+-
+Owner
+West of Scotland Innovation Hub
+Authors:
+K. Ali, H. Battu, S. MacBride-Stewart and C. Sainsbury 
+Status:
+Draft
+
+Revision Control
+Revision Date
+Previous 
+Summary of Changes
+Version
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PRESIDE FACILITATIVE GROUP
+
+PRESIDE Clinical Lead
+
+Prof David Lowe
+Consultant in Emergency Medicine
+Queen Elizabeth University Hospital
+1345 Govan Road
+Glasgow
+G51 4TF
+E: David.Lowe@ggc.scot.nhs.uk
+
+
+Primary Care Clinical Leads
+
+Dr Kashif Ali
+GP Partner and Primary Care Lead Diabetes MCN
+162 Nithsdale Road,
+Glasgow
+G41 5RU
+E: kashif.ali2@nhs.scot 
+
+Dr Hartesh Battu
+    Innovation Fellow
+    ICE Building – QEUH - Glasgow
+    E:  hartesh.battu@glasgow.ac.uk
+    
+
+Primary Care Pharmacy Leads
+
+Dr Seán MacBride-Stewart
+Pharmacy Services NHS GG&C
+E: sean.macbridestewart@ggc.scot.nhs.uk
+    
+    
+    Dr Anne Thomson
+    Lead Pharmacist, Primary Care Clinical Services, NHS GG&C
+    E: anne.thomson2@ggc.scot.nhs.uk
+    
+
+Risk Stratification Lead
+
+Dr Chris Sainsbury
+Consultant Physician - Diabetes and Endocrinology
+Gartnavel General Hospital/Queen Elizabeth University Hospital
+Glasgow
+E:  christopher.sainsbury@ggc.scot.nhs.uk 
+
+
+
+Safe Haven
+
+Dr Charlie Mayor
+West of Scotland Safe Haven Manager
+Clinical Research and Development
+E: Charlie.mayor@ggc.scot.nhs.uk 
+
+
+Astra Zeneca Project Support
+
+Jay Borkhataria
+Astra Zeneca PRESIDE project manager
+
+Keira Lochead
+Astra Zeneca Medical Affairs Lead CVRM
+
+Robert Dalgetty
+Astra Zeneca Regional Business Manager
+
+Emma Bointon
+Astra Zeneca lead for Real world evaluation
+
+Paulo Gomes de Freitas
+Astra Zeneca lead for Health economic assessment
+
+
+eHealth
+
+Simon Rae
+Snr Project Manager 
+eHealth - West of Scotland Innovation Hub
+E: simon.rae@ggc.scot.nhs.uk 
+
+
+R&I (Research & Innovation)
+
+Katriona Brooksbank (Contracting)
+R&I Lead - West of Scotland Innovation Hub
+E: Katriona.Brooksbank@ggc.scot.nhs.uk
+
+Ela Fergusson (Point of contact)
+R&I Project Manager - West of Scotland Innovation Hub
+E: Pamela.fergusson3@ggc.scot.nhs.uk
+
+Ruairidh Davison (Contracting)
+R&I Contracts Manager - West of Scotland Innovation Hub
+E: Ruairidh.Davison@ggc.scot.nhs.uk
+
+
+
+PRESIDE STEERING GROUP
+
+CHAIR
+
+Dr Seán MacBride-Stewart (Non voting member)
+Pharmacy Services NHS GG&C
+E: sean.macbridestewart@ggc.scot.nhs.uk
+
+MEMBERS
+
+Dr Faheem Ahmad (Voting member)
+Consultant Cardiologist NHS GG&C
+E: faheem.ahmad2@ggc.scot.nhs.uk 
+
+
+Prof Brian Kennon (Voting member)
+National Lead for Diabetes and Consultant Diabetologist
+1345 Govan Road
+Glasgow
+G51 4TF
+E: brian.kennon@ggc.scot.nhs.uk
+
+
+Ammani Brown (Voting member)
+Portfolio Manager
+Digital Health Validation Lab
+University of Glasgow
+E: ammani.brown@glasgow.ac.uk 
+
+Kiera Lochead (Non-voting member)
+Astra Zeneca Medical Affairs Lead
+E:  kiera.lochead@astrazeneca.com 
+
+Prof David Lowe (Non-Voting member)
+Consultant in Emergency Medicine 
+Queen Elizabeth University Hospital
+1345 Govan Road
+Glasgow
+G51 4TF
+E: david.lowe@ggc.scot.nhs.uk
+
+Dr Kashif Ali (Non-voting member)
+GP Partner and Primary Care Lead Diabetes MCN
+162 Nithsdale Road,
+Glasgow
+G41 5RU
+E: kashif.ali2@nhs.scot 
+
+Dr Hartesh Battu (Non-voting member)
+    Innovation Fellow
+    ICE Building – QEUH - Glasgow
+    E:  hartesh.battu@glasgow.ac.uk
+
+Dr Anne Thomson (Non-voting member)
+    Lead Pharmacist, Primary Care Clinical Services, NHS GG&C
+    E: anne.thomson2@ggc.scot.nhs.uk
+
+Dr Chris Sainsbury (Non-voting member)
+Consultant Physician - Diabetes and Endocrinology
+Gartnavel General Hospital/Queen Elizabeth University Hospital
+Glasgow
+E:  christopher.sainsbury@ggc.scot.nhs.uk 
+
+Robert Dalgetty (Non-voting member)
+Astra Zeneca Regional Business Director 
+Logistical support and project implementation
+robert.dalgetty@astrazeneca.com 
+
+Emma Bointon (Non-voting member)
+Astra Zeneca Real World Evidence Lead 
+responsible for evidence generation /analysis for this project
+
+Paulo Gomes de Freitas (Non-voting member)
+Astra Zeneca Health Economics Manager 
+responsible for economic analysis for this project
+
+Katriona Brooksbank (Non-voting member)
+R&I Lead - West of Scotland Innovation Hub
+E: Katriona.Brooksbank@ggc.scot.nhs.uk
+
+Ela Fergusson (Non-voting member)
+R&I Project Manager - West of Scotland Innovation Hub
+E: Pamela.fergusson3@ggc.scot.nhs.uk
+
+
+
+
+
+
+
+
+
+
+
+
+
+Table of Contents
+1.	INTRODUCTION	6
+DOCUMENT PURPOSE	6
+NEED AND CHALLENGE	6
+2.	PROJECT DEFINITION	7
+PROJECT AIMS AND OBJECTIVES	7
+OUTCOMES	9
+OUTPUTS	9
+BENEFITS FOR PRIMARY CARE AND THE PATIENT POPULATION	10
+AMENDMENTS TO PROJECT DEFINITIONS	10
+PROJECT SCOPE	10
+3.	PROJECT ORGANISATION	11
+PROJECT STEERING GROUP - QUARTERLY	11
+PROJECT MANAGEMENT GROUP – WEEKLY/FORTNIGHTLY	11
+REPORTING AND ACCOUNTABILITY	11
+DATA PROTECTION AND INFORMATION GOVERNANCE	11
+INTELLECTUAL PROPERTY	11
+4.	PROJECT PLAN	11
+WORKSTREAM	12
+i.	Set-up with identification of GP Practices (K. Ali, H. Battu and E. Fergusson)	12
+ii.	Safehaven and Risk Stratification Model Development (C.Sainsbury and C.Mayor)	12
+iii.	Set up and support Pharmacy Peripatetic Team (S.MacBride-Stewart and A.Thomson)	12
+iv.	Reconciliation (S.MacBride-Stewart)	13
+v.	Model retrain (C.Sainsbury)	13
+vi.	Outputs (S.MacBride-Stewart)	13
+vii.	Scalability and integration (S.MacBride-Stewart)	13
+viii.	Health economic assessment and real world evaluation (Astra Zeneca)	13
+5.	COMMUNICATION PLAN	14
+6.	PROJECT FINANCE AND CONTRACTING	14
+FINANCES	14
+CONTRACTING AND PROCUREMENT	16
+7.	RISK AND ISSUE MANAGEMENT	16
+RISK MANAGEMENT AND TOLERANCE	16
+RISK ASSESSMENT APPROACH	17
+ISSUE MANAGEMENT	18
+8.	BENEFITS MANAGEMENT APPROACH	18
+PATIENTS	18
+NHS (NATIONAL HEALTH SERVICE)	18
+9.	PROJECT CONTROL	19
+PROJECT LIBRARY	19
+PROJECT REPORTING	19
+REPORTING METRICS	19
+CHANGE MANAGEMENT	20
+APPENDICES	21
+APPENDIX 1 – EMPA-REG STUDY	21
+
+
+
+
+
+1.  Introduction 
+
+Document Purpose 
+
+The purpose of this Project Initiation Documentation is to define the PRESIDE project, to form the basis for its management and assessment of overall success. This document details the approach, direction and scope of the project and forms the ‘contract’ between the Project Manager and the Project Steering Group to ensure the project has a sound basis. 
+The document further identifies: 
+* The project approach, objectives, scope, assumptions, and constraints that have been identified in relation to the PRESIDE project. 
+* The work streams associated with the delivery of the project, detailing the expected outcomes, key stakeholders, and success criteria.
+* The roles and responsibilities within the project.
+* Reporting and communications approach. 
+The Project Initiation Document is a living document which will be updated as required to reflect the current status, plans and controls of the project. 
+
+Need and challenge
+According to the Scottish Government, one in 20 people in Scotland have diabetes (317,000 people) - the majority (88.2%) have type 2 diabetes and ~11% have type 1 diabetes. It is thought that a further 49,000 people have undiagnosed type 2 diabetes. Diabetes UK estimates that at least 620,000 people in Scotland are at high risk of developing type 2 diabetes. 
+Diabetes is a major burden on the NHS, costing around 9% of its total health expenditure. T2DM (Type 2 Diabetes Mellitus) can cause serious long-term health problems. It is the most common cause of vision loss and blindness in people of working age. Other complications of type 2 diabetes include kidney disease, nerve damage, foot problems, heart disease and stroke.
+The 2018 GMS contract in Scotland removed the requirement for GP (GENERAL PRACTITIONER) practices to annually report their attainment of Quality Outcome Framework indicators. This led to an immediate significant decrease in performance in 12 of the 16 quality of care indicators and three years later 10 of the 16. One of the largest observed falls was in diabetic foot screening (-22.8%; 95%CI -33.9 to -11.7%). Blood pressure control in patients with diabetes was also substantially reduced. The management of Type 2 diabetes renal and cardiac risk management involves targeting modifiable risk factors (blood pressure, cholesterol, blood glucose) through a combination of lifestyle changes (weight reduction, increased exercise, improved diet) and treatment with medicines (management of dyslipidaemia, hypertension, and hyperglycaemia). 
+Variation in practice is a key risk in the management of chronic diseases with individuals with type 2 diabetes not receiving optimal treatment and therefore not optimally reducing their risk of renal and cardiac risk management. This results in some patients who would benefit from treatments missing out and some others with lower risk being unnecessarily treated. It is estimated that 18.1% of adults have an increased risk of cardiovascular disease (QRISK > 10%, i.e., 10% risk of cardiovascular disease (CVD) event over the next ten years), for the population registered with GP practices in NHSGGC (NHS Greater Glasgow and Clyde). This equates to 180,000 citizens and if all were prescribed SGLT2i’s (sodium glucose cotransporter 2 inhibitors) the direct cost of this based on the current list process would be £110m per annum. SGLT2 prescribing in NHSGGC is already £10m per annum and the total spend in the HSCPs (Health and Social Care Partnerships) for GP practice prescribing (medicines and appliances) is currently £250m per annum.
+
+2. Project Definition
+
+Project Aims and Objectives
+
+The PRESIDE project aims: - 
+1.   Optimally manage the cardiac and renal risks of persons with type 2 diabetes (T2D) in the primary care setting of NHS GG&C
+2.    Reduce variation in the management of cardiac and renal risk in persons with type 2 diabetes through direct input to patient care and indirect training of primary care clinicians.
+
+The PRESIDE project objectives: -
+1. Identify patients at highest risk of cardiac and renal risks of persons with type 2 diabetes (T2D) from routinely collected data using a risk stratification model and evidence its performance.
+2. Clinically review the high-risk patients (as defined as QRISK3 > 30%) and optimise their treatment of diabetes ensuring they are prescribed guideline directed medical therapies 
+3. To educate and support GP practices/clusters in the utilisation of the risk stratification tool in the targeted patient population
+4. Define and document scalable model for risk stratification and pharmacy led optimisation utilising routinely collected data integrated into GP practice
+
+Primary care GP Surgeries/Clusters will be offered the opportunity to participate in the PRESIDE project with an initial target of 1 cluster (6 practices) which would then be expanded to a desired target of 30-50 practices within NHS GG&C focusing on clusters/practices with highest unmet need. The PRESIDE project aims to develop a risk stratification tool and system which assists with both case finding and recording of the intervention for persons at highest risk with type 2 diabetes (T2D) and heart failure (HF) and/or cardiovascular disease (CVD) and/or chronic kidney disease (CKD).  Practices will be invited to participate with priority given to those with highest unmet need. The high risk intervention group will be defined as individuals with Type 2 Diabetes, and either (i) established CVD – defined in such a way as to align with the definitions of established – or at high risk of – atherosclerotic vascular disease using in the major SGLT2i cardiovascular outcome trials, or (ii) individuals at elevated CV risk - taking a risk of 10% over 10 years as the initial threshold for selection.
+Once necessary governance approvals and contracts are in place the risk stratification team will send a request to Safehaven to extract data from SCI-Diabetes/SCI-Store and other clinically relevant NHS Greater Glasgow and Clyde systems for the study patient population by GP practice. Data requested would include a 10-year extract of NHS GGC SCI diabetes, linked prescribing data, linked Structured Medication Reviews from outpatient and inpatient coding data and linked laboratory results. Safehaven will pseudonymise the data obtained through SCI-Diabetes, SCI-Store and the national prescribing information system (PIS) and securely forward it on to the risk stratification team led by Chris Sainsbury who shall develop an algorithm to identify patients at highest risk and therefore most likely to benefit from therapy optimisation, and who are appropriate for the medication under investigation. The risk stratification team will forward a list of highest risk patients to Safehaven who will be able to provide linkage to the appropriate patients and provide this to the NHS GG&C peripatetic team who shall discuss with the GP surgery.
+
+
+Using the data from SCI diabetes and linked datasets within the Safe Haven, we will identify individuals who would benefit from treatment intensification with SGLT2 inhibitor therapy. Available data will be prepared for analysis, and 'cleaned' (removal of outlier values and dates, and alignment of units where values (eg HbA1c) are variously reported in different units at different time points). A dataset will be extracted for each individual that contains the core information required to identify whether an SGLT2 would be an appropriate next step in therapy. Previous significant comorbidities will be extracted from coded information in SMR00 and SMR01 - indicating outpatient or inpatient attendance with specified conditions. Additionally prescription information will be analysed to increase the sensitivity of identification of conditions such as heart failure - aiming to identify individuals prescribed indicator therapies associated with conditions of interest.
+Once the data pipeline is complete, the process of identification of individuals will be commence. This process comprises 2 stages - the first is a rule based analysis of the data aiming to identify individuals who would be recommended SGLT2 prescription using the most recent version of the ADA/EASD combined guidelines for pharmacotherapy in type 2 diabetes. Broadly these guidelines recommend SGLT2 therapy in individuals with prior cardiovascular disease (particularly if heart failure if present) or specific categories of renal impairment. Once these individuals have been identified, the risk stratification algorithm QRisk3 will be applied to those individuals without a prior CV event. We will apply a risk threshold to these individuals (initially proposed at 30%) and individuals with a risk score above this threshold will be recommended for therapy. This threshold may be adjusted according the numbers identified and capacity to initiate therapy.
+
+A pilot study has previously been performed within NHS GGC in which people with T2DM and vascular disease or HF were identified from two primary care practices using local databases. The SCI-Diabetes ‘flexible query’ function was used to identify the patients in both practices who met the biochemical criteria for inclusion in the EMPA-REG trial (See Appendix 1) of empagliflozin in high CV risk individuals. The extracted data for each individual was reviewed to establish if they met the remaining criteria. We contacted patients who met the criteria and were not already prescribed an SGLT2-i. In this pilot study we identified 273 individuals from primary care lists. 82 met trial criteria, of which 42% were already on an SGLT2-i (34.6% in one practice and 58.6% in the other practice). The most common reason for individuals not meeting EMPA-REG criteria was an HbA1c outwith trial entry criteria. To date, 23 people have been further reviewed; 8 have started an SGLT2-i, 2 declined, 1 did not engage, 3 required specialist discussion and 9 were not contacted as they are not suitable for medication change. Those individuals whose last HbA1c was >12-months ago were scheduled for a face-to-face review.
+An NHS GG&C peripatetic team shall be established to review stratified lists of patients per practice and liaise with the practices to determine if they wish to reach out to their patient population or require support from the peripatetic team.  Should the practice require support in reviewing patients the peripatetic team will set up telephone consultations and where necessary adopt suitable alternatives.  Should the peripatetic team find patients in need of further investigations before therapy optimisation (e.g. ACR/HbA1c) they shall highlight those cases to the practice.  The peripatetic team shall work closely with the practice team and provide updates to the GPs/Practice nurses who wish to engage with the study and training on latest guidelines for management of this patient group. The project will also aim to identify barriers to patients being on the optimal guideline directed medical therapy to inform future strategies. 
+The peripatetic team shall record their intervention(s) and outcome(s) (as well as reason for no intervention to prevent recycling of cases) within the electronic health record (EHR) in the GP practice which can then be extracted using a tool provided Central Prescribing Team (Pharmacy Services). 
+See process diagram below which details the PRESIDE engagement, practice/patient intervention as well as outputs (post risk tool modelling). 
+
+
+
+
+Outcomes
+It is anticipated that the development of a primary-care risk stratification tool and remote peripatetic team will help identify high-risk patients that will benefit from treatment escalation whilst reducing serious long-term complications which add further burden to both the patient and the NHS. Existing practice pharmacy teams to be supported in follow-up and continuing this work whilst the existing practice team will be educated and empowered in the utilisation of risk stratification to aid in the prioritisation of patients with the greatest need.  
+
+Outputs
+
+* % of identified patients prescribed SGLT2 at baseline
+* % of identified patients prescribed SGLT2 at time of reporting whose SGLT2 required titration
+* Shift in the % of identified patients prescribed SGLT2 (difference between % at time of reporting and % at baseline)
+* Number of GP practices participating in the PRESIDE study
+* Acceptability and sustainability of the PRESIDE risk stratification tool as assessed by GP practices questionnaire
+* Number of unplanned hospital admissions and/or GP attendance for medication review by the patient population before and after optimisation measuring carbon capture/emissions 
+* Determine if the peripatetic team can provide equitable therapy optimisation looking at rates across the Scottish Index of Multiple Deprivation (SIMD)  
+
+
+Benefits for primary care and the patient population
+The PRESIDE approach to therapy optimisation will benefit both the patient population as well as NHS Greater Glasgow and Clyde. These benefits may be as follows: -
+
+Patient benefits
+Improvement in disease control and clinical outcomes
+Timely optimisation of disease management
+Improved education regarding T2DM
+Reduction in total time spent in healthcare system
+Improved perception of quality of care
+
+NHS benefits
+Increase the rate of disease stabilisation in persons with T2DM
+Increase in the total number of eligible people with T2DM receiving guideline directed medical therapies
+Increase in people with T2DM treated to their HbA1c treatment target
+Reduced CVD events through optimisation of CVD risk factors
+Reduction in healthcare resource utilisation
+Improvement in population level complication outcomes for persons with T2DM
+Opportunity to increase the knowledge of diabetes management and the risk stratification pathway through educational support of the practice team
+Opportunity to better understand barriers from patients and caregivers to accessing OGDMT.
+Development of a primary care MDT (Multi-Disciplinary Team) to discuss persons with T2DM to improve outcomes whilst limiting additional healthcare resource utilisations through the use of remote consultation e.g. Attend Anywhere and Manage Meds app as part of the NHS Scotland recovery plan
+Reduction in unplanned hospital admissions leading to cost reduction for in-patient services 
+Carbon emissions reduced due to the reduction in travel for unplanned hospital admissions and to/from practice for prescription review
+Reduction in carbon emissions as patients are educated regarding their medication(s) during the optimisation leading to reduced non-compliance and therefore reducing dispensed drugs incinerated by the health board   
+
+Amendments to project definitions
+Given the changing landscape of the NHS, it is accepted that changes in scope may occur as the project progresses and will be done so with approval of the project steering group, with reference to associated groups (NHS GG&C innovation governance group, MOU collaborative group) AZ team as appropriate.
+
+Project Scope 
+
+The following defines what is in scope for each of the key stakeholder groups. 
+Within scope for the NHS Greater Glasgow and Clyde
+* Provision of programme management and co-ordination of programme timeline within the project work streams.
+* Creating and maintenance of programme documentation, including (but not limited to) project plans, RAID management logs, communications, and benefits realisation approach.
+* Co-ordination of project reporting in line with the agreed requirements. This will include reporting on overall project progress, key performance indicators and success criteria as well as project activity from all work streams. The West of Scotland Innovation Hub will also act as an escalation point for any risks and/or issues encountered by work stream leads as required. 
+* Provision of input and validation around the business case and technical specification for ongoing service provisioning.
+* Management of contractual agreements and finances relating to the project, and report on progress to the Project Board. 
+* Assistance within NHSGGC around information governance, eHealth compliance as required. 
+* Provide guidance administration support where required to ensure that the project continues to engage with the correct clinical and administration groups.
+
+
+3. Project Organisation 
+
+Project Steering Group - Quarterly
+
+The project steering group includes members from NHS GG&C, Digital Health Validation Lab (UoG) and AstraZeneca.  This group will meet quarterly until the conclusion of the project and review the highlight reports, activity tracking, risk log and output reports.  
+
+Project Management Group – Weekly/Fortnightly
+
+The project management group will include members from NHS GG&C and meet weekly/forthnightly for the first 3 months and then reduce to monthly once the project is up and running but may meet more regularly as required.  This group shall meet to ensure progress is being made to meet the necessary steps of the project and raise any issues/risks.   This will be managed by the AZ project manager.
+
+Reporting and accountability  
+
+Project steering group will update associated stakeholder groups – NHS GG&C Diabetes Managed Clinical Network and Primary Care Cluster Quality Improvement Group, NHS GG&C innovation governance group, NHS GG&C Pharmacy/ AstraZeneca / MOU group, AstraZeneca projects review group, any others identified – as required with briefing notes, highlight reports, presentations
+ 
+Clinical Governance continues under the responsibility of NHS GG&C clinical team and is unaffected by this project.
+   
+Data Protection and Information Governance 
+
+Caldicott guardian approval and any additional approvals required for reporting on PRESIDE outputs will be established by NHS GG&C clinical team. Technical governance including any required amendments to existing DPIA (Data Protection Impact Assessment), SSP (System Security Policy) and associated documentation will be overseen by NHS GG&C innovation team, in collaboration with relevant suppliers.
+
+Intellectual Property  
+No new intellectual property is anticipated from this project.
+
+
+4. Project Plan 
+The project covers a number of work streams, outlined below:
+
+Workstream
+
+i. Set-up with identification of GP Practices (K. Ali and H. Battu)
+Project start up and governance. Promote project amongst primary care colleagues through discussion at The Primary Care Clinical Advisory Group, NHS GG&C Diabetes Managed Clinical Network and Primary Care Cluster Quality Improvement Group and seek to enrol practices to the project. 
+    (Aim to enrol 30-50 practices over the 12 month intervention period)
+
+ii. Safehaven and Risk Stratification Model Development (C.Sainsbury and C.Mayor)
+The  risk stratification model takes the following features: duration of diabetes;   HbA1c (2y mean); SBP (2y mean); any previous diagnosis of peripheral vascular disease with date; any history of blindness (with date); ethnicity; most recent HbA1c; most recent HDL; most recent LDL; most recent urinary Albumin; most recent SBP; current / historical smoking status; any prior history of amputation (with date); any prior history of congestive heart failure (with date); any prior history of ischaemic heart disease (with date); any prior history of stroke (with date); age at diagnosis of diabetes; most recent eGFR; sex; most recent BMI measurement.
+The data required for the risk stratification model is available in the Safe Haven within the combined datasets listed above. The model was developed within a Scottish diabetes population, and has been externally validated within an external population of individuals with type 2 diabetes within North West London. Models will be imported into the Safe Haven and no data will be transferred outwith the TRE (Trusted Research Environment). We will follow the existing Safe Haven governance processes.
+    
+iii. Set up and support Pharmacy Peripatetic Team (S.MacBride-Stewart and A.Thomson)
+A peripatetic multidisciplinary team comprising pharmacy and nursing healthcare professionals will lead on the clinical delivery of the agreed intervention within recruited practices. This team will compromise of independent prescribers with experience in diabetes management:- 
+* 0.5 x WTE Advanced Primary Care Pharmacist 
+* 1.0 x WTE Senior Primary Care Pharmacist 
+* 1.0 x WTE Primary Care Nurse 
+To support the team with the set-up of appointments and organising any missing pre-assessment tests we shall recruit a:-
+* 0.5 x WTE Administration Support Worker
+	
+
+
+iv. Reconciliation (S.MacBride-Stewart)
+Undertake discovery to determine feasibility, anticipated utility and prioritise test of change adoption of risk stratification tools and dashboard
+Piloting of the intervention will be undertaken in a minimum of 1 GP practice using EMIS and 1 GP practice using Vision to test that the structured coding of intervention prompted clinical review directly into the EHR can be effectively extracted (alongside details of medicines changed, stopped, initiated and prescribed) and transferred to SafeHaven for reporting and analysis. 
+In the pilot key components of the intervention will be tested for usability and acceptability. These include the patient-level feedback (intended to include education and action orientated messaging); peripatetic team facilitation delivered education and training for practice teams and peripatetic team facilitation of delivery of clinical reviews and optimisation of diabetes treatments by practice teams. 
+
+v. Model retrain (C.Sainsbury)
+Detailed evaluation plan will be developed as implementation-effectiveness cycles progress. Emerging literature with similar adoptions will be reviewed, collaborative discussions with project partners will be undertaken and incorporated as the plan develops
+Risk stratification model performance will be verified on an annual basis, with retraining being performed on an updated extract of the dataset (previously described) if performance has decreased when compared with previous performance.
+
+vi. Outputs (S.MacBride-Stewart)
+Structured coding of the intervention prompted clinical review will be entered directly into the electronic health record (EHR) and these will record actions taken. The GP IT systems will also record details of medicines changed, stopped, initiated and prescribed at/or around the time of the intervention prompted clinical review. These will be extracted from the GP practice (with their explicit consent) from the Scottish Therapeutics Utility (STU) of the Enhanced services contracting reporting options (EScro) reporting database and safely transferred to the Safe Haven for reporting and analysis. 
+The peripatetic team will submit weekly reporting of their activity (e.g. educational sessions delivered, number of facilitated discussions with practice teams). This metadata of the peripatetic team activity will be reported alongside the information about the intervention prompted clinical reviews.
+The teams within the recruited GP practice will be surveyed after the intervention is complete to determine their satisfaction with the intervention, and to determine their future intentions with respect to responding to similar feedback. 
+
+vii. Scalability and integration (S.MacBride-Stewart)
+
+Outputs will be used to plan for wider dissemination of feedback and to assess the likelihood of wider dissemination of feedback would be acted on with or without the additional support provided through the peripatetic team. 
+NHSGGC is the largest NHS operational board in Scotland with 1 in 4 Scotland citizens registered with GP practices in the health board region so effective scaling up of the project within NHSGGC will be important. 
+ Project members (Sean MacBride-Stewart/Kashif Ali) will take a lead on disseminating the project within the MCN/HSCPs initially within NHSGGC and then to other NHS boards. 
+The feedback will be purposefully designed to be generated by any NHS boards using existing national datasets and business intelligence technology. There are many national networks that can be used to disseminate the project/feedback into other NHS operational boards, for example the Scottish Practice Pharmacy and Prescribing Advisers (SP3A) group.
+Individual work stream leads will have responsibility of the definition and management of activity within their area, with oversight from the West of Scotland Programme Manager solely for reporting and monitoring purposes.
+
+viii. Health economic assessment and real world evaluation (Astra Zeneca)
+
+* Real World Evidence manager will input into the development of the analysis, communication and publication plan. The RWE manager would also support in the review of the final analysis and publication
+
+* Health Economics manager will input into the development of the health care utilisation and carbon saving analysis.  The HE manager would also support in the review of the final analysis and publication.
+
+
+5. Communication Plan 
+
+The project steering group will be responsible for prioritising communications relating to the project, with support from media colleagues within each partner organisation. The aims of the communication will be to ensure:
+* Members of the project team are aware of project activity.
+* Benefits and outcomes are made available to key stakeholders on a regular basis.
+* The project continues to be on the landscape for future programmes of work to help spread and scale the product. 
+
+Highlight reports will be provided at quarterly steering group meetings and made available to associated teams  (innovation governance, MOU group) as appropriate. Press release highlights will be considered collaboratively as the project progresses. Interim or final academic project outputs will be disseminated with conference reports and peer-reviewed papers as appropriate.
+
+6. Project Finance and Contracting
+Finances
+
+
+1. RESOURCES AND COSTS
+1. 
+* AZ contribution to project
+* NHS GG&C contribution to project (incl. in-kind costs)
+
+
+£       301,298
+
+£       426,493.25 (
+2. Direct and Indirect Commitment by Each Organisation (Resources / Costs)
+PRESIDE costs to be covered for day to day running of project
+Area
+Position
+Cost
+Clinical oversight (GGC in Kind)
+David Lowe
+ £                      47,453.75 (GGC)
+
+Kash Ali
+
+
+Hartesh Battu
+
+
+ 
+
+Pharmacy Peripatetic team
+Advanced Clinical Pharmacist
+ £                    261,798.00 (AZ) – reduced following discussions with clinical team to reduce the nurse from band 7 to band 6
+
+Senior Clinical Pharmacist
+
+
+Nurse 
+
+
+Administrator
+
+Risk Stratification
+SafeHaven operational costs
+ £                      12,500.00 (AZ)
+
+ 
+
+West of Scotland Innovation Hub Running Costs and AZ Project Management
+EF – Point of contact but not an active project management
+ £     27,000 (AZ) (AZ to cost for Project Management – Will provide AZ PM as inkind cost)
+£     38,256 (GGC)             
+
+
+Contractual time 
+
+
+Archiving
+
+TOTAL
+ £            301,298 (AZ)
+£           85,709 (GGC)  (plus NHS in-kind costs detailed below of £340,784.25)                                         
+
+Costs below covered are in-kind and covered by NHS GG&C for the PRESIDE project
+
+Costs covered by NHS GG&C to develop and
+Area
+Position
+Cost
+PID Development
+David Lowe
+ £                                         38,034.50 
+
+Seán McBride-Stewart
+
+
+Kashif Ali
+
+
+Christopher Sainsbury
+
+
+Hartesh Battu
+
+
+Charlie Mayor (Head of SafeHaven)
+
+
+Katriona Brooksbank
+
+
+Simon Rae (eHealth)
+
+
+Ela Fergusson
+
+
+Ruairidh Davison
+
+Pharmacy Oversight
+Seán McBride-Stewart/ Anne Thomson
+ £                                         11,426.25 
+Risk Stratification and Clinical Oversight
+Christopher Sainsbury
+ £                                         19,038.75 
+R&I input
+Comms, WoSIH processes
+ £                                         61,215.75 
+Steering Group
+David Lowe
+ £                                         76,069.00 
+
+Seán McBride-Stewart
+
+
+Kashif Ali
+
+
+Dr Faheem Ahmad
+
+
+Prof. Brian Kennon
+
+
+Ammani Brown
+
+
+Hartesh Battu
+
+
+Christopher Sainsbury
+
+
+Anne Thomson
+
+
+
+
+
+
+
+TOTAL
+ £                                                                                         340,784.25 
+
+
+
+3. Method for Monitoring and Recording Resources and Costs
+The project manager will manage the costs and time utilisation.
+This will be reported at the project meetings and made available to both parties. The role of the Project Board, is to define the scope of the project, ensure that milestones are achieved in relation to target dates and budgets. Also, if necessary, to make any changes to the project (subject to regulatory review) on an-ongoing basis to ensure the operational delivery is achieved and KPIs attained.
+4. Arrangements for the Longer-Term Implications of the Project
+Service continuity will be of high importance and whilst the peripatetic team will have completed their function at the end of the project they will have educated and facilitated practices in the use of the risk stratification list in patient therapy optimisation. Therefore, practices would benefit from access to the lists generated by the risk stratification tool, and this shall be enabled by the risk stratification team. 
+
+
+5. Constraints
+Recruitment of required staff by GGHB.
+Enrolment of practices who are already at capacity.
+
+
+
+
+Contracting and Procurement 
+
+Collaborative agreement between NHS GG&C and Astra Zeneca to be finalised before the commencement of the service development.
+
+
+7. Risk and Issue Management 
+
+Risk Management and Tolerance 
+
+The West of Scotland Innovation Hub will be responsible for collating and managing an overall risk register relating to the project, escalating to the Project Board as required. The project risk register will be held within the project Microsoft Teams site and accessible by all work stream leads at any time. 
+Work stream leads will be responsible for maintaining a risk register relating to their area of the project, and this will be reviewed with the West of Scotland Innovation Hub Project Lead regularly. Tolerance levels will be discussed with each of the work stream leads in advance. It is appreciated that timescales may slip, however this will not affect the delivery of the project outcomes. 
+It will be the responsibility of the Clinical Teams to raise operational risks within their clinical service and ensure these are actioned accordingly. 
+
+Risk Assessment Approach
+
+Risks will use the national guidelines adopted by NHSGGC which currently equates to any risks with a residual score of 12 or greater being in breach of tolerance.
+
+Risks can be assessed as the combination of the likelihood of an event occurring and the impact of the event. Establishing how we assess likelihood and impact is key to determining the risk rating and subsequent actions to be taken.
+
+Likelihood
+The likelihood of a risk or event occurring will be assessed either quantitatively (% occurrence) or qualitatively (chance of occurrence). The assessment of the current likelihood of a risk occurring will consider the controls currently in place to prevent it.
+Having assessed the likelihood of the event happening, the following table will be used to determine the likelihood score (1 – 5) for the event.
+
+
+
+Likelihood
+Score
+Chance of Occurrence
+1
+Rare
+0 – 15%
+Hard to imagine this event happening – will only happen in exceptional circumstances.
+2
+Unlikely
+15 – 35%
+Not expected to occur but might – unlikely to happen.
+3
+Possible
+35 – 60%
+May occur – reasonable chance of occurring.
+4
+Likely
+60 – 80%
+More likely to occur than not.
+5
+Almost Certain
+80 – 100%
+Hard to imagine this event not happening.
+
+Impact
+The impact on the project of a risk or event happening will be assessed using the criteria in the following table. The impact score (1-5) can then be determined for each category.
+
+
+
+
+Likelihood
+
+
+
+Rare
+Unlikely
+Possible
+Likely
+Almost Certain
+
+
+Score
+1
+2
+3
+4
+5
+Impact
+ Catastrophic
+5
+5
+10
+15
+20
+25
+
+ Major
+4
+4
+8
+12
+16
+20
+
+ Moderate
+3
+3
+6
+9
+12
+15
+
+ Minor
+2
+2
+4
+6
+8
+10
+
+ Negligible
+1
+1
+2
+3
+4
+5
+
+Risk Rating
+Combined score
+Action/Treatment
+HIGH
+15 – 25
+Poses a serious threat. Requires immediate action to reduce/mitigate the risk. 
+MEDIUM
+9 – 12
+Poses a threat and should be pro-actively managed to reduce/mitigate the risk.
+LOW
+1 – 8
+Poses a low threat and should continue to be monitored.
+
+Issue Management
+
+Individual work stream leads will be responsible for the management of issues relating to the delivery in their area. Project issues will be reviewed regularly between the individual work stream leads and the Project Manager to ensure that corrective actions are being carried out to resolve, progress or escalate as required. 
+Issue escalation will be through the Project Board, with a summary of outstanding issues being made available in advance of each project board meeting. 
+
+8. Benefits Management Approach 
+
+Patients
+For persons with Type 2 diabetes and CVD and/or Heart failure and/or CKD this project will accelerate optimisation of therapy, and directly reduce existing variations in care in GGHB.
+The identification of high-risk patients with Type 2 diabetes and CVD and/or Heart failure and/or CKD who require a therapy review will benefit from a case-finding based invitation to their primary care GP where optimised therapy will be assessed and implemented by the peripatetic team which will result in improved patient outcomes.
+
+NHS (National Health Service)
+This project will address the substantial backlog in patient long term condition reviews for those at greatest risk of complications. It will resolve issues including unnecessary variations in prescribing for persons with Type 2 diabetes and HF and/or CVD and/or CKD. 
+It should result in reduced exacerbations, hospitalisations, and overall cost of management. 
+
+AstraZeneca
+AstraZeneca have defined areas they want to focus in with ‘Medical Missions’ looking at supporting patients with long term conditions. 
+This project will identify persons with Diabetes and HF and/or CVD and/or CKD at greatest risk of complications to optimise their therapy to reduce exacerbations and hospitalisations.
+
+AstraZeneca manufacture Dapagliflozin (FORXIGA), a sodium-glucose cotransporter 2 (SGLT2) inhibitor for the treatment of chronic kidney disease in adults with and without type-2 diabetes. This along with other licensed SGLT2i’s are a treatment option available on the GGHB formulary. 
+To be clear this Joint Working Project is not dependent upon the prescribing of any AstraZeneca medicines and any prescribing decisions shall be the sole responsibility of a patient’s treating GP/Peripatetic team reviewer.
+
+9. Project Control 
+Project Library
+
+The central document repository will be on Microsoft Teams, with access managed through the Project Manager. 
+A project log will be established, containing project risk, assumption, issue, and dependency logs, and will be available for all to review. The Project Manager will have responsibility for maintaining these. Local RAID (Risk Action Issue and Decisions) logs will be the responsibility of the individual work stream leads. These will be reviewed regularly at Project Meetings, and in advance of the Project Board reporting. 
+A project action log will be available in Microsoft Teams, with allocated tasks to relevant users within the project. Individual work stream action logs will be maintained by the work stream leads. 
+
+Project Reporting
+
+Project reporting is based around the requirement to inform the PRESIDE Project Board of progress against the expected outcomes and allow them to make decisions on continued project justification.
+A highlight report will be submitted to the project board by the West of Scotland Innovation Programme Manager. The format of this will be a concise report detailing:
+* Past and forecast activity, and deviations from expected milestones for all work streams
+* Detailing of inter-dependencies of the project work streams, and monitoring of progress
+* A summary of key risks and issues that have exceeded tolerance levels. 
+* Where appropriate escalation reports for major risks and issues. 
+Work stream leads will be required to work with the Project Manager to ensure the information contained in this report is accurate and up to date. 
+Exception reporting will be invoked if the project timeline is expected to slip by more than 2 months; or if changes to clinical availability or resource is likely to affect the outcomes of the project. In the first instance, escalation will be to the Project Steering Group, who will advise on appropriate next steps. 
+In addition to this, clinical activity will be reported to the Project Board as required. This will be managed by the Clinical Leads in each work stream.
+
+REPORTS/ INTERIN REPORTS
+Reporting Metrics
+
+Reporting on intervention progress
+* numbers of practices recruited to PRESIDE
+* numbers in the team (+WTE)
+* numbers of practices where intervention has been initiated 
+* number of practices where intervention has been completed 
+* overall progress (% of patients fully actioned of all patients identified) 
+
+Reporting on metrics relating to outcome
+* % of identified patients prescribed SGLT2 at baseline
+* % of identified patients prescribed SGLT2 at time of reporting
+* shift in the % of identified patients prescribed SGLT2 (difference between % at time of reporting and % at baseline)
+
+
+Change Management 
+
+Any proposed changes to scope, timescales, or resource will be discussed within the project team, and made with agreement of the PRESIDE Project Board. Exception reporting will be used as required to reflect this through project planning. 
+
+
+
+Appendices
+
+Appendix 1 – EMPA-REG Study
+
+Putting EMPAREG into Practice: A Data Driven Intervention
+Y Duvieusart1, D Morrison1, C McKeag1, S Cahill2, K McTweed3, CAR Sainsbury1, GC Jones1
+1 – Gartnavel General hospital, NHS GGC, UK, 2 – Garscadden Brun Medical practice, NHS GGC, UK 3 – Arran surgery, NHS GGC, UK 
+
+
+
+
+
+
+
+
+
+	20 / 21
+

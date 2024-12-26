@@ -1,0 +1,21 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+PRESIDE: Primary care led risk stratification and treatment escalation with SGLT2-I's using digital innovation in patients with Type 2 diabetes
+</title>
+
+<associated label>
+@preside
+</associated label>
+
+<context>
+contained within document: preside_pid_text.txt
+</context>
+
+<current status>
+initial meeting planned in December was cancelled
+new date for kick-off meeting in January 2025 - aim to get LPAC drafted for this meeting
+</current status>

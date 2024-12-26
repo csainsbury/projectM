@@ -1,0 +1,23 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+metamodels to predict the risk of diabetes complications
+</title>
+
+<associated label>
+@MWDH_Metamodels
+</associated label>
+
+<context>
+contained in the following files:
+metamodel_documentation.txt
+metamodel_algorithm_summary.txt
+metamodel_appendix_1.txt
+</context>
+
+<current status>
+project complete and documentation submitted for review
+</current status>

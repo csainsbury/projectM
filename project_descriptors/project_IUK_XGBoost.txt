@@ -1,0 +1,29 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+Combination of EHR and retinal image data using XGBoost models
+</title>
+
+<context>
+ongoing project
+funded by InnovateUK
+collaboration with MWDH/Dundee university
+
+in brief:
+extraction of EHR data from population with type 2 diabetes
+time-series measurements are managed by binning data (bins around 5 years). summary features generated within these bins: median value, last value, interquartile range, gradient of a linear regression and number of measures. other measures are either binary, categorical or ordinal categorical
+corresponding retinal images are processed using RETFound, giving an embedding vector (size 1024)
+EHR features (around 80 in number) are concatenated with RETFound embeddings
+an XGBoost classifier was then trained to predict a variety of outcomes
+outcomes of interest: incident chronic kidney disease, microalbuminuria, 3-point MACE, CV death, all-cause death
+models were trained in a 4-fold split
+a subset of phenotypically-constrained cases which represent low-risk individuals were extracted from each test set and the model was also tested on this group - the idea here is to assess whether we can predict an elevated risk of adverse outcome in a group of individuals who would otherwise be classified as 'healthy / low risk' using traditional risk scoring systems.
+</context>
+
+<subtasks and deadlines>
+contained in the inbox.csv folder
+the label associated with this project is @Dundee_Colab
+</subtasks and deadlines>

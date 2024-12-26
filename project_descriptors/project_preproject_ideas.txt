@@ -1,0 +1,22 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+preproject ideas: general unstructured project ideas and thoughts for later development or archiving
+</title>
+
+<associated label>
+@thoughts
+</associated label>
+
+<context>
+Ideas will be listed here with links to context as/when possible
+</context>
+
+<current status>
+</current status>
+
+<task_notes>
+</task_notes>

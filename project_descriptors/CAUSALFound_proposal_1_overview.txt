@@ -1,0 +1,73 @@
+﻿v1.2 041224
+CAUSALFound: A Foundation Model for Causal Inference and Personalised Treatment Effect Prediction
+________________
+
+
+Abstract
+The increasing availability of comprehensive electronic health records (EHR) presents unprecedented opportunities for understanding treatment effects across diverse patient populations. While randomised controlled trials (RCTs) remain the gold standard for establishing treatment efficacy, they are inherently limited by strict inclusion criteria, practical constraints on investigating therapeutic combinations, and challenges in generalising findings to underrepresented populations. Target Trial Emulation (TTE) has emerged as a powerful framework for the use of observational data to complement RCTs, but current approaches lack the granularity needed for personalised treatment effect predictions.
+CAUSALFound is a novel causal foundation model that combines advanced synthetic data generation, systematic trial emulation, and deep learning to enable real-time, personalised treatment effect predictions whilst mapping the complex relationships between patient phenotypes and treatment outcomes. Our approach takes advantages of Scotland's comprehensive Routinely Collected Data infrastructure to develop a robust framework for causal inference and clinical decision support.
+The CAUSALFound pipeline employs a multi-method approach to synthetic data generation, implementing complementary architectures including partial conditional variational autoencoders (VAEs), conditional GANs, time-series GANs, and diffusion models. Each method generates separate synthetic cohorts, maintaining clear provenance tracking and enabling method-specific quality assessment. These synthetic cohorts undergo rigorous validation for distribution accuracy, clinical plausibility, and temporal consistency before being used in systematic trial emulations.
+A key innovation is the development of a calibration manifold framework that aligns trial emulation results with available RCT data. This manifold captures the variation of calibration requirements across population characteristics and treatment contexts, enabling principled extension of calibration to populations without direct RCT validation. The framework incorporates geometric methods for uncertainty quantification, scaling confidence estimates based on manifold properties such as proximity to known calibration points and local curvature.
+The foundation model implements a multi-stream architecture with specialised processing pathways for EHR features, intervention specifications, and effect sizes. These streams are integrated through fusion layers and transformer blocks to create unified representations of clinical scenarios. The model is trained using a combination of self-supervised learning, contrastive learning, and multi-task objectives, ensuring robust and generalizable representations of treatment effects.
+This comprehensive approach enables two primary applications: 1) real-time, validated, and calibrated personalised treatment effect predictions at the point of care, and 2) systematic exploration of the "efficacy manifold" - the high-dimensional relationship between patient phenotypes, biomarker profiles, and treatment outcomes. The framework can be extended beyond therapeutic interventions to predict the impact of variations in any EHR features on clinical outcomes.
+CAUSALFound incorporates continuous monitoring systems for model performance, data drift detection, and regular clinical validation against new RCT results. This ensures sustained reliability and enables systematic updates as new evidence becomes available. By bridging the gap between population-level evidence and individual patient care, CAUSALFound represents a significant advance in the application of causal inference methods to personalised medicine, providing clinicians with rapid, evidence-based guidance while uncovering novel patterns in treatment response across diverse patient populations.
+________________
+
+
+Background
+Target Trial Emulation (TTE) - first introduced by Hernán and Robins in 2016 - has emerged as a powerful framework for leveraging observational data to emulate randomised controlled trials (RCTs). Over the past eight years, this methodology has gained increasing acceptance in the medical research community, evolving from a novel concept to an established approach for causal inference. Recent years have seen TTEs regularly published across diverse medical domains, from cardiovascular medicine to oncology, demonstrating its broad applicability and reliability when properly implemented.
+
+
+While RCTs remain the gold standard for establishing treatment efficacy, they face inherent limitations in their ability to inform personalised clinical decision-making. These limitations include restricted phenotypic diversity due to strict inclusion/exclusion criteria, practical constraints on the number of therapeutic combinations that can be investigated, and the challenge of generalising findings to populations not well-represented in trial cohorts. Furthermore, traditional RCTs often lack the granularity needed to understand how treatment effects vary across the full spectrum of patient phenotypes and biomarker profiles.
+
+
+Scotland (and NHS GGC), possesses an exceptional resource in its comprehensive Routinely Collected Data (RCD) infrastructure. This dataset, spanning diverse populations and clinical settings, provides a significant opportunity to advance beyond traditional TTE approaches.
+
+
+Aims: Building on this data foundation, we aim to develop CAUSALFound, leveraging our own novel conditional variational autoencoder (VAE) architecture and RCD resources, in addition to taking advantage of established methods for synthetic data generation and target trial emulation. This system has two primary objectives: 1) to enable real-time validated and calibrated, personalised treatment (or other intervention) effect predictions at the point of care, and 2) to facilitate the exploration and characterization of what we term the "efficacy manifold" - the high-dimensional relationship between patient phenotypes, biomarker profiles, and treatment outcomes. By mapping this efficacy manifold, we seek to uncover previously unidentified patterns in treatment response across diverse patient populations, while simultaneously providing clinicians with rapid, evidence-based guidance for individual patient care.
+The approach can be extended from predicting the effect size on a given outcome due to a particular therapeutic agent, to the impact of variation of any EHR features on outcome across the observed range of values.
+
+
+________________
+
+
+End-to-End Methods Overview (in brief)
+Generate EHR feature and conditioning feature value ranges
+* EHR feature inputs will be generated systematically from permutations of plausible values across all features of interest.
+* Conditioning features will be generated similarly, eg for therapeutic agents all plausible combinations of therapies (constrained by instances in source data and guidelines) will be taken.
+* For each (EHR feature input example) and (conditioning feature) pairing, synthetic cohorts (with controlled deviation per feature) will be generated.
+
+
+ Synthetic Data Generation & Target Trial Emulation
+* Multiple Generative Models: Implement multiple complementary approaches (eg non-conditional VAE, partial conditional VAE, conditional GAN, time-series GAN, and diffusion model) to generate synthetic patient data with different strengths (eg GAN potentially better at synthesis of data representing small classes).
+* Separate Cohort Maintenance: Generate and maintain separate synthetic cohorts from each method to enable traceability and method-specific quality assessment.
+* Quality Control: Apply comprehensive validation to each synthetic cohort, including distribution checks, clinical plausibility assessment, and temporal consistency verification.
+* Target Trial Emulation: Conduct systematic trial emulations using the synthetic cohorts, maintaining separation between different synthetic data sources and capturing multiple outcome measures.
+
+
+ Calibration Process
+* RCT Comparison: Where possible, compare trial emulation results with available RCT data, computing calibration coefficients that align predicted effects with observed outcomes.
+* Manifold Construction: Create a calibration manifold that captures the variation of  calibration requirements across population characteristics and treatment contexts.
+* Manifold Extension: Develop geometric methods to extend calibration to populations without RCT data, with uncertainty scaling based on manifold properties.
+* Validation: Implement comprehensive validation procedures including leave-one-out cross-validation and sensitivity analyses.
+
+
+ Foundation Model Development
+* Multi-stream Architecture: Design specialised processing pathways for EHR features, intervention specifications, and effect sizes.
+* Embedding Integration: Implement fusion layers and transformer blocks to combine information across streams into a unified representation.
+* Pre-training: Apply self-supervised learning using masked prediction tasks and contrastive learning between similar cases.
+* Multi-task Training: Train the model using multiple objectives including effect size reconstruction, intervention-effect prediction, and phenotype clustering.
+
+
+ Practical Application
+* Input Processing: Handle missing effect sizes during inference using masked input protocols and specialised attention mechanisms.
+* Fine-tuning: Adapt the model for comparative drug analysis through focused fine-tuning while preserving base model representations.
+* Inference Pipeline: Process patient data and drug specifications to generate comparative predictions with uncertainty estimates.
+* Output Generation: Produce structured outputs including comparison metrics, uncertainty measures, supporting information, and clinical context.
+
+
+ Monitoring and Maintenance
+* Performance Tracking: Continuously monitor model performance, embedding space quality, and prediction calibration.
+* Data Drift Detection: Implement systems to detect potential shifts in population characteristics or treatment patterns.
+* Model Updates: Maintain procedures for periodic model updates incorporating new data while preserving performance characteristics.
+* Clinical Validation: Regularly validate model outputs against new clinical data and RCT results as they become available.
