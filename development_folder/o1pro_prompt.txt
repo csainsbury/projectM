@@ -1,0 +1,143 @@
+System / Role: You are an expert software engineer and solution architect. You have the following context and requirements for creating a multi-project project management engine. You will receive a pseudo code outline, a sample API call to Google’s Gemini model, and details about how to integrate with a GitHub repository. Generate production-ready code (preferably in Python) that accomplishes the tasks described below, leveraging the Gemini API and storing data in the specified GitHub repository.
+
+1. Project Context
+	•	Objective: Build a tool that uses an LLM to suggest the next best actions (project tasks) across multiple concurrent projects.
+	•	Data Storage: A GitHub repository (at github.com/csainsbury/taskmanagement/) will store feedback and patterns (via JSON/JSONL files) and serve as a data source for context retrieval.
+	•	LLM Integration: We will use the Gemini model to generate suggestions. An example API call is given below.
+
+2. Pseudo Code Reference
+
+You have the following pseudo code outlining the application’s structure and flow:
+
+# -----------------------------------------
+# Main System Components
+# -----------------------------------------
+class TaskAnalysisService:
+    def monitor_task_changes(self, previous_tasks, current_tasks):
+        """Compare task lists to identify completed and modified tasks"""
+        # Return dict with 'completed', 'modified', and 'downstream' tasks
+        pass
+    
+    def analyze_completion_patterns(self, task_history):
+        """Analyze patterns in task completion"""
+        # Return analytics (e.g., avg_completion_time, success_rate, etc.)
+        pass
+
+class GitHubActivityMonitor:
+    def track_related_activity(self, task_id, timeframe):
+        """Monitor GitHub for activity (commits, PRs, issues) related to tasks"""
+        pass
+
+class UserInteractionTracker:
+    def track_interactions(self, suggestion_id):
+        """Track how users interact with suggestions"""
+        pass
+
+class TemporalAnalysis:
+    def analyze_patterns(self, historical_data):
+        """Analyze time-based patterns that affect success"""
+        pass
+
+class FeedbackCollector:
+    def collect_feedback(self, suggestion_id):
+        """Aggregate feedback from all sources (tasks, GitHub, user interactions, temporal data)"""
+        pass
+    
+    def aggregate_feedback(self, *feedback_sources):
+        """Combine feedback into structured format"""
+        pass
+
+class FeedbackRepository:
+    def update_outcomes(self, feedback_data):
+        """Append new feedback data to action_outcomes.jsonl"""
+        pass
+    
+    def update_patterns(self, new_patterns):
+        """Update success_patterns.json with new analysis"""
+        pass
+    
+    def update_temporal(self, temporal_data):
+        """Update temporal_analysis.json with new patterns"""
+        pass
+
+class ContextAggregator:
+    def aggregate_context(self, query, repo_contents):
+        """Collect relevant feedback data and combine it with user query + repo info"""
+        pass
+    
+    def get_feedback_context(self):
+        """Load outcomes, patterns, temporal data from JSON/JSONL in the repo"""
+        pass
+
+class LLMService:
+    def generate_suggestion(self, context):
+        """Send a prompt to Gemini, parse the response, and produce an actionable suggestion."""
+        pass
+
+# -----------------------------------------
+# Main Process Runner
+# -----------------------------------------
+class ActionSuggestionSystem:
+    def process_query(self, user_query):
+        """Pull latest data, aggregate context, and generate suggestion from LLM"""
+        pass
+    
+    def update_feedback(self):
+        """Periodic feedback update process"""
+        pass
+
+# Cron-like Jobs
+def hourly_task_sync():
+    """Sync tasks, run feedback updates, etc."""
+    pass
+
+def daily_pattern_analysis():
+    """Perform daily analysis of patterns"""
+    pass
+
+3. Gemini API Example
+
+Here is a sample curl request to Google’s Gemini model:
+
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=YOUR_KEY_HERE" \
+  -H 'Content-Type: application/json' \
+  -X POST \
+  -d '{
+    "contents": [{
+      "parts": [{"text": "Explain how AI works"}]
+    }]
+  }'
+
+Use a similar structure for your code’s Gemini calls (i.e., constructing JSON with "contents").
+
+4. Requirements for the Final Code
+
+Goal: Implement the functionality described in the pseudo code, ensuring:
+	1.	Class Implementations: Provide complete Python class definitions (TaskAnalysisService, GitHubActivityMonitor, etc.) with the methods outlined.
+	2.	Gemini Model Integration:
+	•	Construct prompts based on context from GitHub repository data, user queries, and historical feedback.
+	•	Execute API calls to Gemini, handle authentication (use a placeholder YOUR_KEY_HERE).
+	•	Parse Gemini’s response and return relevant suggestions.
+	3.	GitHub Repository Updates:
+	•	Read and write to JSON/JSONL files (like action_outcomes.jsonl, success_patterns.json, temporal_analysis.json).
+	•	Implement or stub out functions to commit changes back to the GitHub repo (e.g., using git commands or a GitHub API client).
+	4.	Feedback Loop:
+	•	Periodically collect feedback on tasks from multiple sources, store aggregated feedback in the GitHub repo.
+	•	Support cron-like “hourly” and “daily” jobs (hourly_task_sync, daily_pattern_analysis) that refresh tasks, analyze patterns, etc.
+	5.	Code Quality:
+	•	Include docstrings or comments describing each class, method, and the major flows.
+	•	Ensure the code is reasonably modular and could be adapted to real production usage.
+
+5. What to Return
+
+Provide a single integrated codebase (Python) that:
+	1.	Defines all classes in the pseudo code.
+	2.	Implements the Gemini LLM call.
+	3.	Reads/writes from the GitHub repository JSON/JSONL files.
+	4.	Demonstrates how to run process_query, update_feedback, hourly_task_sync, and daily_pattern_analysis.
+
+Make assumptions or insert placeholders as needed (e.g., placeholders for credentials, local storage paths, or GitHub commit functions). Ensure the final code compiles and includes clear instructions or comments.
+
+Instruction: Please generate the complete Python code fulfilling these specifications. If any detail from the pseudo code is unclear, make a reasonable assumption and proceed.
+
+End of Optimized Prompt
