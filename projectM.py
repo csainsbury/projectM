@@ -174,24 +174,34 @@ class GitHubActivityMonitor:
                 "tasks": [],
                 "raw_contents": {}
             }
-            
-            contents = self.resource_manager.get_repository_contents(TASKS_PATH)
-            for content in contents:
-                if content.name.endswith(('.json', '.txt')):
-                    file_content = content.decoded_content.decode()
-                    if content.name.endswith('.json'):
-                        try:
-                            parsed = json.loads(file_content)
-                            if isinstance(parsed, dict) and "tasks" in parsed:
-                                tasks_content["tasks"].extend(parsed["tasks"])
-                            tasks_content["raw_contents"][content.path] = parsed
-                        except json.JSONDecodeError as e:
-                            logger.error(f"Error parsing JSON from {content.path}: {e}")
-                    else:
-                        tasks_content["raw_contents"][content.path] = file_content
 
+            # Get all contents from the tasks directory
+            contents = self.resource_manager.repo.get_contents("tasks")
+            
+            # Recursively process all JSON files in the tasks directory
+            for content in contents:
+                if content.path.endswith('.json'):
+                    try:
+                        file_content = content.decoded_content.decode()
+                        parsed = json.loads(file_content)
+                        
+                        # If it's a task file, add to tasks list
+                        if isinstance(parsed, dict) and "tasks" in parsed:
+                            tasks_content["tasks"].extend(parsed["tasks"])
+                        elif isinstance(parsed, list):
+                            # If it's a direct list of tasks
+                            tasks_content["tasks"].extend(parsed)
+                            
+                        tasks_content["raw_contents"][content.path] = parsed
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Error parsing JSON from {content.path}: {e}")
+                    except Exception as e:
+                        logger.error(f"Error processing {content.path}: {e}")
+
+            logger.info(f"Found {len(tasks_content['tasks'])} tasks in repository")
             state_manager.set_cache('tasks', tasks_content)
             return tasks_content
+            
         except Exception as e:
             logger.error(f"Error getting tasks: {e}")
             raise
@@ -638,6 +648,9 @@ Please analyze the above context and suggest next best actions.
         print("\n=== API Payload Size ===")
         payload_size = len(json.dumps(payload))
         print(f"Payload size: {payload_size} characters")
+
+        print("\n=== API Payload ===")
+        print(json.dumps(payload, indent=2))
 
         try:
             response = requests.post(
