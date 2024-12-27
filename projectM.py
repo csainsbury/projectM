@@ -772,6 +772,88 @@ def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
 
 
 # ---------------------------------------------------------------------------
+# CLASS: TaskAnalysisService
+# ---------------------------------------------------------------------------
+class TaskAnalysisService:
+    """Analyzes task completion patterns and dependencies"""
+    
+    def monitor_task_changes(self, previous_tasks: List[dict], current_tasks: List[dict]) -> dict:
+        """Compare task lists to identify completed and modified tasks."""
+        previous_ids = {task['id'] for task in previous_tasks}
+        current_ids = {task['id'] for task in current_tasks}
+
+        completed = previous_ids - current_ids
+        modified = []
+        downstream = []
+
+        for ctask in current_tasks:
+            # Check for modified tasks
+            for ptask in previous_tasks:
+                if (ctask['id'] == ptask['id'] and 
+                    (ctask.get('description') != ptask.get('description') or
+                     ctask.get('status') != ptask.get('status') or
+                     ctask.get('priority') != ptask.get('priority'))):
+                    modified.append(ctask['id'])
+            
+            # Check for downstream dependencies
+            if 'depends_on' in ctask:
+                if any(dep_id in completed for dep_id in ctask['depends_on']):
+                    downstream.append(ctask['id'])
+
+        return {
+            'completed': list(completed),
+            'modified': modified,
+            'downstream': downstream
+        }
+
+    def analyze_completion_patterns(self, task_history: List[dict]) -> dict:
+        """Analyze patterns in task completion"""
+        if not task_history:
+            return {
+                'avg_completion_time_hours': None,
+                'success_rate': 0,
+                'completion_by_priority': {},
+                'completion_by_type': {},
+                'avg_dependencies': 0
+            }
+
+        completed_tasks = [t for t in task_history if t.get('completed_at')]
+        total_tasks = len(task_history)
+        
+        # Calculate metrics
+        completion_times = []
+        priorities = {}
+        types = {}
+        dependency_counts = []
+
+        for task in completed_tasks:
+            # Completion time
+            if isinstance(task.get('created_at'), (int, float)) and isinstance(task.get('completed_at'), (int, float)):
+                completion_time = (task['completed_at'] - task['created_at']) / 3600.0  # Convert to hours
+                completion_times.append(completion_time)
+
+            # Priority statistics
+            priority = task.get('priority', 'unknown')
+            priorities[priority] = priorities.get(priority, 0) + 1
+
+            # Type statistics
+            task_type = task.get('type', 'unknown')
+            types[task_type] = types.get(task_type, 0) + 1
+
+            # Dependency statistics
+            deps = len(task.get('depends_on', []))
+            dependency_counts.append(deps)
+
+        return {
+            'avg_completion_time_hours': sum(completion_times) / len(completion_times) if completion_times else None,
+            'success_rate': len(completed_tasks) / total_tasks if total_tasks > 0 else 0,
+            'completion_by_priority': priorities,
+            'completion_by_type': types,
+            'avg_dependencies': sum(dependency_counts) / len(dependency_counts) if dependency_counts else 0
+        }
+
+
+# ---------------------------------------------------------------------------
 # Main initialization
 # ---------------------------------------------------------------------------
 def initialize_system():
