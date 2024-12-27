@@ -1,4 +1,7 @@
 {
-  "avg_completion_time_hours": 6.25,
-  "success_rate": 0.6666666666666666
+  "avg_completion_time_hours": null,
+  "success_rate": 0,
+  "completion_by_priority": {},
+  "completion_by_type": {},
+  "avg_dependencies": 0
 }
