@@ -40,6 +40,8 @@ import logging
 import sys
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
+from time import sleep
+from github import RateLimitExceededException
 
 # Configure logging
 logging.basicConfig(
@@ -1030,54 +1032,123 @@ def handle_query():
 
 # Add this function to handle periodic GitHub updates
 def sync_local_to_github(file_pattern='inbox'):
-    """Sync local task files to GitHub repository
-    
-    Args:
-        file_pattern (str): 'inbox' for inbox_tasks.json only, 'all' for all task files
-    """
+    """Sync local task files to GitHub repository"""
     try:
+        logger.info(f"Starting sync with pattern: {file_pattern}")
         github_token = os.getenv('GITHUB_TOKEN')
-        repo = Github(github_token).get_repo(GITHUB_REPO)
+        if not github_token:
+            raise ValueError("GITHUB_TOKEN not found in environment variables")
+            
+        github = Github(github_token)
+        repo = github.get_repo(GITHUB_REPO)
+        logger.info(f"Connected to GitHub repo: {GITHUB_REPO}")
+        
+        # Get absolute path to tasks directory
+        tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
+        logger.info(f"Tasks directory: {tasks_dir}")
+        
+        if not os.path.exists(tasks_dir):
+            raise ValueError(f"Tasks directory not found: {tasks_dir}")
         
         # Determine which files to sync
         files_to_sync = []
         if file_pattern == 'inbox':
             files_to_sync = ['inbox_tasks.json']
-        else:  # 'all'
-            files_to_sync = [f for f in os.listdir('tasks') if f.endswith('.json')]
+            logger.info("Syncing inbox tasks only")
+        else:
+            files_to_sync = [f for f in os.listdir(tasks_dir) 
+                           if f.endswith(('.json', '.txt'))]
+            logger.info(f"Found {len(files_to_sync)} files to sync: {files_to_sync}")
         
         for filename in files_to_sync:
-            try:
-                # Read local task file
-                file_path = os.path.join('tasks', filename)
-                with open(file_path, 'r') as f:
-                    local_tasks = json.load(f)
-                
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
                 try:
-                    # Try to get existing file
-                    file_content = repo.get_contents(f"tasks/{filename}")
-                    repo.update_file(
-                        f"tasks/{filename}",
-                        f"Update {filename} from local system",
-                        json.dumps(local_tasks, indent=2),
-                        file_content.sha
-                    )
-                except Exception:
-                    # File doesn't exist, create it
-                    repo.create_file(
-                        f"tasks/{filename}",
-                        f"Initial upload of {filename}",
-                        json.dumps(local_tasks, indent=2)
-                    )
-                
-                logger.info(f"Successfully synced {filename} to GitHub")
-                
-            except Exception as e:
-                logger.error(f"Failed to sync {filename} to GitHub: {e}")
-                continue
+                    # Check rate limit before each operation
+                    rate_limit = github.get_rate_limit()
+                    if rate_limit.core.remaining < 2:
+                        wait_time = (rate_limit.core.reset - datetime.now()).seconds + 60
+                        logger.info(f"Rate limit reached. Waiting {wait_time} seconds...")
+                        sleep(wait_time)
+                    
+                    # Read local file
+                    file_path = os.path.join(tasks_dir, filename)
+                    logger.info(f"Reading local file: {file_path}")
+                    
+                    if not os.path.exists(file_path):
+                        logger.warning(f"File not found: {file_path}")
+                        break
+                    
+                    # Read file content based on type
+                    try:
+                        if filename.endswith('.json'):
+                            with open(file_path, 'r') as f:
+                                file_content_str = json.dumps(json.load(f), indent=2)
+                        else:  # .txt files
+                            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                                file_content_str = f.read()
+                    except UnicodeDecodeError:
+                        logger.error(f"Unicode decode error in {filename}, trying with 'latin-1' encoding")
+                        with open(file_path, 'r', encoding='latin-1') as f:
+                            file_content_str = f.read()
+                    
+                    logger.info(f"Successfully read {filename}")
+                    
+                    # Try to get existing file from GitHub
+                    github_path = f"tasks/{filename}"
+                    logger.info(f"Checking for existing file in GitHub: {github_path}")
+                    
+                    try:
+                        file_content = repo.get_contents(github_path)
+                        current_content = file_content.decoded_content.decode('utf-8')
+                        
+                        # Compare contents
+                        if current_content == file_content_str:
+                            logger.info(f"No changes detected for {filename}, skipping update")
+                            break
+                        
+                        logger.info(f"Changes detected, updating {github_path}")
+                        result = repo.update_file(
+                            github_path,
+                            f"Update {filename} from local system",
+                            file_content_str,
+                            file_content.sha
+                        )
+                        logger.info(f"Successfully updated {filename} in GitHub")
+                    except Exception as not_found:
+                        logger.info(f"File not found in GitHub, creating new: {github_path}")
+                        result = repo.create_file(
+                            github_path,
+                            f"Initial upload of {filename}",
+                            file_content_str
+                        )
+                        logger.info(f"Successfully created {filename} in GitHub")
+                    
+                    logger.info(f"Sync complete for {filename}")
+                    sleep(1)
+                    break
+                    
+                except RateLimitExceededException:
+                    rate_limit = github.get_rate_limit()
+                    wait_time = (rate_limit.core.reset - datetime.now()).seconds + 60
+                    logger.warning(f"Rate limit exceeded. Waiting {wait_time} seconds...")
+                    sleep(wait_time)
+                    retry_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error processing {filename}: {str(e)}")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        sleep(5)
+                    else:
+                        logger.error(f"Failed to sync {filename} after {max_retries} attempts")
+                        break
                 
     except Exception as e:
-        logger.error(f"Failed to initialize GitHub sync: {e}")
+        logger.error(f"Failed to initialize GitHub sync: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     try:

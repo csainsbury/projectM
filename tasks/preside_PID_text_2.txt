@@ -1,11 +1,3 @@
-   
-
-                           
-
-
-
-
-
 Project Initiation Document
 
  PRESIDE:  Primary care led risk stratification and treatment escalation with SGLT2-I's using digital innovation in patients with Type 2 diabetes

@@ -1,5 +1,0 @@
-/bin/sh: /Users/csainsbury/Documents/projectM/sync_inbox.sh: Permission denied
-zsh: permission denied: /Users/csainsbury/Documents/projectM/sync_inbox.sh
-zsh: no such file or directory: /Users/csainsbury/Documents/projectM/sync_inbox.sh
-/bin/bash: /Users/csainsbury/Documents/projectM/sync_inbox.sh: Operation not permitted
-/bin/bash: /Users/csainsbury/Documents/projectM/sync_inbox.sh: Operation not permitted
