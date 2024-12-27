@@ -33,19 +33,10 @@ import requests
 from datetime import datetime
 from github import Github
 from github.Repository import Repository
+from dotenv import load_dotenv
 
-# ---------------------------------------------------------------------------
-# Utility function to commit to GitHub (placeholder)
-# ---------------------------------------------------------------------------
-def commit_to_github(file_path, commit_message="Updating data file"):
-    """
-    Placeholder for committing changes to a GitHub repository.
-    In production, you'd integrate with the GitHub API or run `git` commands.
-    """
-    # For demo, we simply print out that we're "committing" the file.
-    print(f"[INFO] Committing {file_path} to GitHub with message: '{commit_message}'")
-    # Insert real commit logic here (GitHub API calls or local git commands).
-
+# Load environment variables
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Data file paths (in a real scenario, these might map to your GitHub repo)
@@ -62,10 +53,13 @@ os.makedirs(DATA_DIR, exist_ok=True)
 # ---------------------------------------------------------------------------
 # GitHub Configuration 
 # ---------------------------------------------------------------------------
-GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"
-GITHUB_REPO = "owner/repository"  # e.g. "username/project-repo"
-TASKS_PATH = "tasks"  # Directory in repo containing task files
-FEEDBACK_DIR = "feedback"  # Directory for feedback data
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+if not GITHUB_TOKEN:
+    raise ValueError("GITHUB_TOKEN environment variable is not set")
+
+GITHUB_REPO = "csainsbury/projectM"  # e.g. "username/project-repo"
+TASKS_PATH = "tasks"
+FEEDBACK_DIR = "feedback"
 
 
 # ---------------------------------------------------------------------------
@@ -78,32 +72,26 @@ class TaskAnalysisService:
     """
 
     def monitor_task_changes(self, previous_tasks, current_tasks):
-        """
-        Compare task lists to identify completed and modified tasks.
-        Return a dict with 'completed', 'modified', and 'downstream' tasks.
-
-        :param previous_tasks: List of task dicts representing the old state.
-        :param current_tasks: List of task dicts representing the new state.
-        :return: dict with keys ['completed', 'modified', 'downstream'] containing lists of task IDs
-        """
+        """Compare task lists to identify completed and modified tasks."""
         previous_ids = {task['id'] for task in previous_tasks}
         current_ids = {task['id'] for task in current_tasks}
 
         completed = previous_ids - current_ids
-        # For demonstration, let's treat anything that changed in description as "modified".
         modified = []
-        for ctask in current_tasks:
-            for ptask in previous_tasks:
-                if ctask['id'] == ptask['id'] and ctask.get('description') != ptask.get('description'):
-                    modified.append(ctask['id'])
-
-        # Downstream tasks could be tasks that depend on completed tasks, but for brevity
-        # we’ll just say any task that starts after a completed task is "downstream."
-        # (Replace with actual logic in real scenarios)
         downstream = []
+
+        # Replace placeholder logic with actual dependency checking
         for ctask in current_tasks:
+            # Check for modified tasks
+            for ptask in previous_tasks:
+                if (ctask['id'] == ptask['id'] and 
+                    (ctask.get('description') != ptask.get('description') or
+                     ctask.get('status') != ptask.get('status') or
+                     ctask.get('priority') != ptask.get('priority'))):
+                    modified.append(ctask['id'])
+            
+            # Check for downstream dependencies
             if 'depends_on' in ctask:
-                # If any depends_on is in 'completed', consider this a downstream task
                 if any(dep_id in completed for dep_id in ctask['depends_on']):
                     downstream.append(ctask['id'])
 
@@ -114,33 +102,49 @@ class TaskAnalysisService:
         }
 
     def analyze_completion_patterns(self, task_history):
-        """
-        Analyze patterns in task completion (e.g., average time to complete tasks,
-        success rate, etc.)
+        """Analyze patterns in task completion"""
+        if not task_history:
+            return {
+                'avg_completion_time_hours': None,
+                'success_rate': 0,
+                'completion_by_priority': {},
+                'completion_by_type': {},
+                'avg_dependencies': 0
+            }
 
-        :param task_history: List of dicts representing historical tasks with completion info.
-        :return: A dict of analytics, e.g., { 'avg_completion_time':..., 'success_rate':... }
-        """
-        # Example: compute average completion time (in hours) for tasks that have a 'completed_at'
         completed_tasks = [t for t in task_history if t.get('completed_at')]
-        if not completed_tasks:
-            avg_completion_time = None
-            success_rate = 0
-        else:
-            total_time = 0
-            success_count = len(completed_tasks)
-            for ct in completed_tasks:
-                start = ct.get('created_at')
-                end = ct.get('completed_at')
-                if isinstance(start, float) and isinstance(end, float):
-                    total_time += (end - start)
-            avg_completion_time = (total_time / success_count) / 3600.0 if success_count > 0 else None
-            # Let success_rate be the fraction of tasks completed (assuming total tasks known).
-            success_rate = success_count / len(task_history)
+        total_tasks = len(task_history)
+        
+        # Calculate metrics
+        completion_times = []
+        priorities = {}
+        types = {}
+        dependency_counts = []
+
+        for task in completed_tasks:
+            # Completion time
+            if isinstance(task.get('created_at'), (int, float)) and isinstance(task.get('completed_at'), (int, float)):
+                completion_time = (task['completed_at'] - task['created_at']) / 3600.0  # Convert to hours
+                completion_times.append(completion_time)
+
+            # Priority statistics
+            priority = task.get('priority', 'unknown')
+            priorities[priority] = priorities.get(priority, 0) + 1
+
+            # Type statistics
+            task_type = task.get('type', 'unknown')
+            types[task_type] = types.get(task_type, 0) + 1
+
+            # Dependency statistics
+            deps = len(task.get('depends_on', []))
+            dependency_counts.append(deps)
 
         return {
-            'avg_completion_time_hours': avg_completion_time,
-            'success_rate': success_rate
+            'avg_completion_time_hours': sum(completion_times) / len(completion_times) if completion_times else None,
+            'success_rate': len(completed_tasks) / total_tasks if total_tasks > 0 else 0,
+            'completion_by_priority': priorities,
+            'completion_by_type': types,
+            'avg_dependencies': sum(dependency_counts) / len(dependency_counts) if dependency_counts else 0
         }
 
 
@@ -159,32 +163,68 @@ class GitHubActivityMonitor:
     def get_repository_contents(self, path: str = "") -> dict:
         """
         Recursively get contents of repository or specific path
+        Returns a dictionary with both file structure and contents
         """
-        contents = {}
+        contents = {
+            "structure": {},
+            "file_contents": {}
+        }
         try:
             for content in self.repo.get_contents(path):
                 if content.type == "dir":
-                    contents[content.name] = self.get_repository_contents(content.path)
+                    # Recursively get contents of subdirectories
+                    sub_contents = self.get_repository_contents(content.path)
+                    contents["structure"][content.name] = sub_contents["structure"]
+                    contents["file_contents"].update(sub_contents["file_contents"])
                 else:
-                    contents[content.name] = content.decoded_content.decode()
+                    # Store both the file info and its contents
+                    if content.name.endswith(('.txt', '.json')):
+                        try:
+                            file_content = content.decoded_content.decode()
+                            contents["structure"][content.name] = "file"
+                            contents["file_contents"][content.path] = {
+                                "content": file_content,
+                                "type": content.name.split('.')[-1]
+                            }
+                            print(f"Successfully loaded: {content.path}")
+                        except Exception as e:
+                            print(f"Error loading {content.path}: {e}")
         except Exception as e:
-            print(f"Error getting repo contents: {e}")
+            print(f"Error accessing {path}: {e}")
         return contents
 
-    def get_tasks(self) -> list:
+    def get_tasks(self) -> dict:
         """
         Get task files from repository
+        Returns both the tasks and their raw content
         """
-        tasks = []
+        tasks_content = {
+            "tasks": [],
+            "raw_contents": {}
+        }
         try:
-            task_files = self.repo.get_contents(TASKS_PATH)
-            for file in task_files:
-                if file.name.endswith('.json'):
-                    content = json.loads(file.decoded_content.decode())
-                    tasks.extend(content.get('tasks', []))
+            repo_contents = self.get_repository_contents(TASKS_PATH)
+            
+            # Process all JSON and text files found
+            for file_path, file_info in repo_contents["file_contents"].items():
+                print(f"Processing file: {file_path}")
+                
+                if file_info["type"] == "json":
+                    try:
+                        content = json.loads(file_info["content"])
+                        if isinstance(content, dict) and "tasks" in content:
+                            tasks_content["tasks"].extend(content["tasks"])
+                        tasks_content["raw_contents"][file_path] = content
+                    except json.JSONDecodeError as e:
+                        print(f"Error parsing JSON from {file_path}: {e}")
+                else:  # txt files
+                    tasks_content["raw_contents"][file_path] = file_info["content"]
+                    
+            print(f"Found {len(tasks_content['tasks'])} tasks across {len(tasks_content['raw_contents'])} files")
+            
         except Exception as e:
             print(f"Error getting tasks: {e}")
-        return tasks
+        return tasks_content
 
     def track_related_activity(self, task_id, timeframe):
         """
@@ -227,24 +267,33 @@ class UserInteractionTracker:
     """
 
     def __init__(self):
-        # Could store interactions in memory or load from persistent storage
         self.interactions_log = []
 
-    def track_interactions(self, suggestion_id):
+    def track_interactions(self, suggestion_id, action="viewed", metadata=None):
         """
-        In a real system, track if user accepted/rejected or how user responded to the suggestion.
-
-        :param suggestion_id: The ID of the suggestion for which we track user interactions
+        Track user interactions with suggestions
+        
+        :param suggestion_id: The ID of the suggestion
+        :param action: One of ['viewed', 'accepted', 'modified', 'rejected']
+        :param metadata: Optional dict with additional interaction data
         :return: dict of the tracked interaction
         """
-        # Placeholder: let's assume user always "viewed" the suggestion
         interaction_event = {
             "suggestion_id": suggestion_id,
             "timestamp": time.time(),
-            "action": "viewed"  # could be 'accepted', 'modified', 'rejected', etc.
+            "action": action,
+            "metadata": metadata or {}
         }
         self.interactions_log.append(interaction_event)
-        print(f"[INFO] UserInteractionTracker: Recorded interaction for suggestion {suggestion_id}")
+        
+        # Store interaction in feedback repository
+        try:
+            feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
+            feedback_repo.update_outcomes(interaction_event)
+            print(f"[INFO] Stored interaction for suggestion {suggestion_id}")
+        except Exception as e:
+            print(f"[ERROR] Failed to store interaction: {e}")
+            
         return interaction_event
 
 
@@ -258,24 +307,58 @@ class TemporalAnalysis:
     """
 
     def analyze_patterns(self, historical_data):
-        """
-        Evaluate time-based patterns in the historical_data.
+        """Evaluate time-based patterns in the historical_data."""
+        if not historical_data:
+            return {
+                "completions_by_hour": [0] * 24,
+                "completions_by_day": [0] * 7,
+                "avg_completion_time_by_hour": [0] * 24,
+                "success_rate_by_day": [0] * 7
+            }
 
-        :param historical_data: list of feedback or task completion events with timestamps
-        :return: dict capturing aggregated patterns
-        """
-        # For simplicity, let's just count completions by hour of day
         completions_by_hour = [0] * 24
+        completions_by_day = [0] * 7
+        completion_times_by_hour = [[] for _ in range(24)]
+        attempts_by_day = [0] * 7
+        successes_by_day = [0] * 7
 
         for item in historical_data:
+            created_at = item.get('created_at')
             completed_at = item.get('completed_at')
-            if isinstance(completed_at, float):
-                # Convert epoch to hour of day
-                hour_of_day = datetime.utcfromtimestamp(completed_at).hour
-                completions_by_hour[hour_of_day] += 1
+            
+            if isinstance(completed_at, (int, float)):
+                completion_dt = datetime.fromtimestamp(completed_at)
+                completions_by_hour[completion_dt.hour] += 1
+                completions_by_day[completion_dt.weekday()] += 1
 
-        # We can store these as a pattern
-        return {"completions_by_hour": completions_by_hour}
+                if isinstance(created_at, (int, float)):
+                    completion_time = (completed_at - created_at) / 3600  # hours
+                    completion_times_by_hour[completion_dt.hour].append(completion_time)
+
+            if isinstance(created_at, (int, float)):
+                created_dt = datetime.fromtimestamp(created_at)
+                attempts_by_day[created_dt.weekday()] += 1
+                if completed_at:
+                    successes_by_day[created_dt.weekday()] += 1
+
+        # Calculate average completion time by hour
+        avg_completion_time_by_hour = [
+            sum(times) / len(times) if times else 0 
+            for times in completion_times_by_hour
+        ]
+
+        # Calculate success rate by day
+        success_rate_by_day = [
+            successes_by_day[i] / attempts_by_day[i] if attempts_by_day[i] > 0 else 0
+            for i in range(7)
+        ]
+
+        return {
+            "completions_by_hour": completions_by_hour,
+            "completions_by_day": completions_by_day,
+            "avg_completion_time_by_hour": avg_completion_time_by_hour,
+            "success_rate_by_day": success_rate_by_day
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -333,14 +416,39 @@ class FeedbackRepository:
         self.github = Github(github_token)
         self.repo = self.github.get_repo(repo_name)
 
+    def ensure_file_exists(self, path: str, initial_content: str = ""):
+        """Create file if it doesn't exist"""
+        try:
+            self.repo.get_contents(path)
+            print(f"File exists: {path}")
+        except Exception as e:
+            if "404" in str(e):
+                print(f"Creating new file: {path}")
+                try:
+                    self.repo.create_file(
+                        path=path,
+                        message=f"Initialize {path}",
+                        content=initial_content
+                    )
+                except Exception as create_error:
+                    print(f"Error creating file {path}: {create_error}")
+            else:
+                print(f"Error checking {path}: {e}")
+
     def update_outcomes(self, feedback_data):
         """Update feedback data in GitHub repo"""
         try:
             path = f"{FEEDBACK_DIR}/action_outcomes.jsonl"
+            
+            # Ensure feedback directory and file exist
+            self.ensure_file_exists(path, "")
+            
+            # Get current content
             content = self.repo.get_contents(path)
             
             # Append new data
-            updated_content = content.decoded_content.decode() + "\n" + json.dumps(feedback_data)
+            current_content = content.decoded_content.decode() if content else ""
+            updated_content = current_content + "\n" + json.dumps(feedback_data) if current_content else json.dumps(feedback_data)
             
             self.repo.update_file(
                 path=path,
@@ -348,42 +456,53 @@ class FeedbackRepository:
                 content=updated_content,
                 sha=content.sha
             )
+            print(f"Successfully updated {path}")
         except Exception as e:
             print(f"Error updating outcomes: {e}")
 
     def update_patterns(self, new_patterns):
-        """
-        Update success_patterns.json with new analysis
-        :param new_patterns: dict with pattern data
-        """
-        existing = {}
-        if os.path.exists(SUCCESS_PATTERNS_FILE):
-            with open(SUCCESS_PATTERNS_FILE, 'r', encoding='utf-8') as f:
-                existing = json.load(f)
-
-        existing.update(new_patterns)
-
-        with open(SUCCESS_PATTERNS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(existing, f, indent=2)
-
-        commit_to_github(SUCCESS_PATTERNS_FILE, "Updated success patterns")
+        """Update success patterns file"""
+        try:
+            path = f"{FEEDBACK_DIR}/success_patterns.json"
+            
+            # Ensure file exists
+            self.ensure_file_exists(path, "{}")
+            
+            content = self.repo.get_contents(path)
+            existing = json.loads(content.decoded_content.decode()) if content else {}
+            existing.update(new_patterns)
+            
+            self.repo.update_file(
+                path=path,
+                message="Update success patterns",
+                content=json.dumps(existing, indent=2),
+                sha=content.sha
+            )
+            print(f"Successfully updated {path}")
+        except Exception as e:
+            print(f"Error updating patterns: {e}")
 
     def update_temporal(self, temporal_data):
-        """
-        Update temporal_analysis.json with new patterns
-        :param temporal_data: dict with time-based analysis
-        """
-        existing = {}
-        if os.path.exists(TEMPORAL_ANALYSIS_FILE):
-            with open(TEMPORAL_ANALYSIS_FILE, 'r', encoding='utf-8') as f:
-                existing = json.load(f)
-
-        existing.update(temporal_data)
-
-        with open(TEMPORAL_ANALYSIS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(existing, f, indent=2)
-
-        commit_to_github(TEMPORAL_ANALYSIS_FILE, "Updated temporal analysis")
+        """Update temporal analysis file"""
+        try:
+            path = f"{FEEDBACK_DIR}/temporal_analysis.json"
+            
+            # Ensure file exists
+            self.ensure_file_exists(path, "{}")
+            
+            content = self.repo.get_contents(path)
+            existing = json.loads(content.decoded_content.decode()) if content else {}
+            existing.update(temporal_data)
+            
+            self.repo.update_file(
+                path=path,
+                message="Update temporal analysis",
+                content=json.dumps(existing, indent=2),
+                sha=content.sha
+            )
+            print(f"Successfully updated {path}")
+        except Exception as e:
+            print(f"Error updating temporal: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -398,45 +517,78 @@ class ContextAggregator:
     def aggregate_context(self, query, repo_contents):
         """
         Collect relevant feedback data and combine it with user query + repo info
-
-        :param query: str user query
-        :param repo_contents: dict or list representing content from the GitHub repo
-        :return: dict containing the aggregated context
         """
+        print("\n=== Files and Content Being Aggregated ===")
+        print("Repository Contents Structure:")
+        
+        # Pretty print the structure
+        if isinstance(repo_contents, dict):
+            for key, value in repo_contents.items():
+                if key == "raw_contents":
+                    print("\nRaw Contents Files:")
+                    for file_path in value.keys():
+                        print(f"- {file_path}")
+                elif key == "tasks":
+                    print(f"\nTasks Found: {len(value)}")
+                else:
+                    print(f"- {key}")
+
         context = {
             "user_query": query,
             "repo_info": repo_contents,
         }
+        
+        print("\n=== Final Aggregated Context ===")
+        print(json.dumps(context, indent=2))
         return context
 
     def get_feedback_context(self):
         """
-        Load outcomes, patterns, temporal data from JSON/JSONL in the repo.
-        :return: dict with keys [action_outcomes, success_patterns, temporal_analysis]
+        Load outcomes, patterns, temporal data and tasks from the repo
         """
-        # Load the action outcomes
+        print("\n=== Loading Repository Contents ===")
+        
+        github_monitor = GitHubActivityMonitor(GITHUB_TOKEN, GITHUB_REPO)
+        tasks_content = github_monitor.get_tasks()
+        
+        print("\n=== Loading Feedback Files ===")
+        
+        # Load existing feedback data
         outcomes = []
         if os.path.exists(ACTION_OUTCOMES_FILE):
+            print(f"Loading: {ACTION_OUTCOMES_FILE}")
             with jsonlines.open(ACTION_OUTCOMES_FILE, mode='r') as reader:
                 outcomes = list(reader)
+        else:
+            print(f"File not found: {ACTION_OUTCOMES_FILE}")
 
-        # Load success patterns
         success_patterns = {}
         if os.path.exists(SUCCESS_PATTERNS_FILE):
+            print(f"Loading: {SUCCESS_PATTERNS_FILE}")
             with open(SUCCESS_PATTERNS_FILE, 'r', encoding='utf-8') as f:
                 success_patterns = json.load(f)
+        else:
+            print(f"File not found: {SUCCESS_PATTERNS_FILE}")
 
-        # Load temporal
         temporal_analysis = {}
         if os.path.exists(TEMPORAL_ANALYSIS_FILE):
+            print(f"Loading: {TEMPORAL_ANALYSIS_FILE}")
             with open(TEMPORAL_ANALYSIS_FILE, 'r', encoding='utf-8') as f:
                 temporal_analysis = json.load(f)
+        else:
+            print(f"File not found: {TEMPORAL_ANALYSIS_FILE}")
 
-        return {
+        # Combine all context
+        feedback_context = {
+            "tasks_content": tasks_content,
             "action_outcomes": outcomes,
             "success_patterns": success_patterns,
             "temporal_analysis": temporal_analysis
         }
+        
+        print("\n=== Feedback Context Summary ===")
+        print(json.dumps(feedback_context, indent=2))
+        return feedback_context
 
 
 # ---------------------------------------------------------------------------
@@ -447,7 +599,7 @@ class LLMService:
     Sends prompts to Google's Gemini model, retrieves suggestions, and parses them.
     """
 
-    def __init__(self, api_key="YOUR_KEY_HERE"):
+    def __init__(self, api_key=os.getenv('GOOGLE_API_KEY')):
         self.api_key = api_key
         self.gemini_endpoint = (
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key="
@@ -457,20 +609,20 @@ class LLMService:
     def generate_suggestion(self, context):
         """
         Construct a prompt from the context, call Gemini, and return an actionable suggestion.
-
-        :param context: dict containing user_query, repo_info, or other relevant data
-        :return: str with the LLM's suggestion
         """
-        # Construct a prompt from the aggregated context
         user_query = context.get("user_query", "No user query provided.")
-        # Example of how you might incorporate additional data:
-        # context["repo_info"] or context["feedback_data"], etc.
+        
+        prompt_text = f"""
+User Query: {user_query}
 
-        # In a more sophisticated scenario, you'd build a more structured prompt
-        # that includes relevant historical feedback or patterns.
+Repository Context:
+{json.dumps(context.get('repo_info', {}), indent=2)}
 
-        # For demonstration, let's keep it simple:
-        prompt_text = f"User query: {user_query}\n\nContext data: {context.get('repo_info', {})}\n\nPlease suggest next best actions."
+Please analyze the above context and suggest next best actions.
+"""
+
+        print("\n=== Final Prompt Being Sent to LLM ===")
+        print(prompt_text)
 
         payload = {
             "contents": [
@@ -482,26 +634,37 @@ class LLMService:
             ]
         }
 
+        print("\n=== API Payload Size ===")
+        payload_size = len(json.dumps(payload))
+        print(f"Payload size: {payload_size} characters")
+
         try:
             response = requests.post(
                 self.gemini_endpoint,
                 headers={"Content-Type": "application/json"},
                 json=payload,
-                timeout=30
+                timeout=60  # Keep longer timeout just in case
             )
             response.raise_for_status()
             data = response.json()
-            # The structure of the Gemini response may differ. Let's assume it returns
-            # something like data["candidates"][0]["content"] or similar.
-            # We'll use a placeholder path for demonstration:
+            
+            print("\n=== API Response ===")
+            print(json.dumps(data, indent=2))
+            
             suggestions = data.get("candidates", [{}])
             if suggestions:
                 text_suggestion = suggestions[0].get("content", "No suggestion content found.")
             else:
                 text_suggestion = "No suggestions returned from Gemini."
+        except requests.exceptions.Timeout:
+            print("\n[ERROR] API request timed out.")
+            text_suggestion = "Error: API request timed out."
+        except requests.exceptions.RequestException as e:
+            print(f"\n[ERROR] API request failed: {str(e)}")
+            text_suggestion = f"Error contacting LLM: {str(e)}"
         except Exception as e:
-            print(f"[ERROR] Gemini API call failed: {e}")
-            text_suggestion = "Error contacting LLM."
+            print(f"\n[ERROR] Unexpected error: {str(e)}")
+            text_suggestion = f"Unexpected error: {str(e)}"
 
         return text_suggestion
 
@@ -533,24 +696,20 @@ class ActionSuggestionSystem:
     def process_query(self, user_query):
         """
         Pull latest data, aggregate context, and generate suggestion from LLM.
-
-        :param user_query: str user query (e.g., "What should I do next for project ABC?")
-        :return: str the LLM's suggestion
         """
         # 1. Get feedback context from the GitHub repository
         feedback_context = self.context_aggregator.get_feedback_context()
 
-        # 2. Combine the user_query + feedback context in a single aggregator
+        # 2. Combine the user_query + feedback context
         final_context = self.context_aggregator.aggregate_context(
             user_query,
             repo_contents=feedback_context
         )
 
-        # 3. Call the LLM to generate a suggestion
+        # 3. Generate suggestion using LLM
         suggestion_text = self.llm_service.generate_suggestion(final_context)
 
-        # 4. (Optional) Track the suggestion in user interactions
-        #    We can generate a suggestion_id if needed, or use a timestamp-based ID
+        # 4. Track the suggestion
         suggestion_id = f"suggestion-{int(time.time())}"
         self.user_tracker.track_interactions(suggestion_id)
 
@@ -558,17 +717,38 @@ class ActionSuggestionSystem:
 
     def update_feedback(self):
         """
-        Periodic feedback update process. Collect feedback from multiple sources
-        and store aggregated feedback in the GitHub repository.
+        Periodic feedback update process
         """
-        # For demonstration, let's assume we are collecting feedback for a single suggestion ID.
-        # In a real scenario, you might collect for multiple tasks or suggestions.
-        suggestion_id = f"feedback-{int(time.time())}"
-        raw_feedback = self.feedback_collector.collect_feedback(suggestion_id)
-        aggregated_feedback = self.feedback_collector.aggregate_feedback(raw_feedback)
+        try:
+            # Get current timestamp for this feedback cycle
+            current_time = int(time.time())
+            
+            # Collect feedback from multiple sources
+            task_analyzer_feedback = self.task_analyzer.analyze_completion_patterns(
+                self.context_aggregator.get_feedback_context().get("tasks_content", {}).get("tasks", [])
+            )
+            
+            temporal_feedback = self.temporal_analyzer.analyze_patterns(
+                self.context_aggregator.get_feedback_context().get("tasks_content", {}).get("tasks", [])
+            )
+            
+            # Aggregate all feedback
+            aggregated_feedback = {
+                "timestamp": current_time,
+                "task_patterns": task_analyzer_feedback,
+                "temporal_patterns": temporal_feedback,
+                "user_interactions": self.user_tracker.interactions_log
+            }
 
-        # Write to action_outcomes.jsonl
-        self.feedback_repo.update_outcomes(aggregated_feedback)
+            # Store in repository
+            self.feedback_repo.update_patterns(task_analyzer_feedback)
+            self.feedback_repo.update_temporal(temporal_feedback)
+            self.feedback_repo.update_outcomes(aggregated_feedback)
+            
+            print("[INFO] Successfully updated feedback in repository")
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to update feedback: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -576,72 +756,81 @@ class ActionSuggestionSystem:
 # ---------------------------------------------------------------------------
 def hourly_task_sync(task_analyzer: TaskAnalysisService):
     """
-    Sync tasks, run feedback updates, etc.
-    In a real environment, fetch tasks from a database or project management API,
-    detect changes, store them, commit them to GitHub, etc.
+    Sync tasks and run feedback updates
     """
-    print("[INFO] Running hourly task sync...")
-    # example usage
-    previous_tasks = [
-        {"id": "task1", "description": "Old description", "created_at": time.time() - 7200},
-        {"id": "task2", "description": "Some other old description", "created_at": time.time() - 3600}
-    ]
-    current_tasks = [
-        {"id": "task2", "description": "Some other old description", "created_at": time.time() - 3600},
-        {"id": "task3", "description": "Brand new task", "created_at": time.time()}
-    ]
-
-    changes = task_analyzer.monitor_task_changes(previous_tasks, current_tasks)
-    print(f"[INFO] Detected changes: {changes}")
-    # Store or act upon them as needed
-    # (Placeholder) In real usage, you might commit a JSON or parse it to the GitHub repo.
+    try:
+        # Get current tasks from GitHub
+        github_monitor = GitHubActivityMonitor(GITHUB_TOKEN, GITHUB_REPO)
+        current_tasks = github_monitor.get_tasks().get("tasks", [])
+        
+        # Load previous tasks from feedback repository
+        feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
+        previous_tasks_content = feedback_repo.repo.get_contents(f"{FEEDBACK_DIR}/previous_tasks.json")
+        previous_tasks = json.loads(previous_tasks_content.decoded_content.decode()) if previous_tasks_content else []
+        
+        # Analyze changes
+        changes = task_analyzer.monitor_task_changes(previous_tasks, current_tasks)
+        
+        # Store current tasks as previous for next sync
+        feedback_repo.update_file(
+            f"{FEEDBACK_DIR}/previous_tasks.json",
+            "Update previous tasks",
+            json.dumps(current_tasks, indent=2)
+        )
+        
+        # Store changes in feedback
+        feedback_repo.update_outcomes({
+            "timestamp": time.time(),
+            "type": "task_sync",
+            "changes": changes
+        })
+        
+        print(f"[INFO] Task sync completed. Changes detected: {changes}")
+        
+    except Exception as e:
+        print(f"[ERROR] Task sync failed: {e}")
 
 
 def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
-                           temporal_analyzer: TemporalAnalysis,
-                           feedback_repo: FeedbackRepository):
+                         temporal_analyzer: TemporalAnalysis,
+                         feedback_repo: FeedbackRepository):
     """
-    Perform daily analysis of patterns, update success_patterns.json and temporal_analysis.json
+    Perform daily analysis of patterns
     """
-    print("[INFO] Running daily pattern analysis...")
-    # In a real environment, load your entire task history from a database
-    # Here, we just simulate a small historical set
-    task_history = [
-        {
-            "id": "task1",
-            "description": "Completed example task",
-            "created_at": time.time() - 86400 * 2,  # created 2 days ago
-            "completed_at": time.time() - 86400 * 1.5  # completed 1.5 days ago
-        },
-        {
-            "id": "task2",
-            "description": "Another completed task",
-            "created_at": time.time() - 3600,
-            "completed_at": time.time() - 1800  # completed 30 min ago
-        },
-        {
-            "id": "task3",
-            "description": "Ongoing task",
-            "created_at": time.time() - 1800
-            # not completed
+    try:
+        # Get all tasks
+        github_monitor = GitHubActivityMonitor(GITHUB_TOKEN, GITHUB_REPO)
+        task_history = github_monitor.get_tasks().get("tasks", [])
+        
+        # Analyze patterns
+        completion_stats = task_analyzer.analyze_completion_patterns(task_history)
+        temporal_data = temporal_analyzer.analyze_patterns(task_history)
+        
+        # Store analysis results
+        analysis_results = {
+            "timestamp": time.time(),
+            "completion_patterns": completion_stats,
+            "temporal_patterns": temporal_data
         }
-    ]
-
-    # Analyze patterns
-    completion_stats = task_analyzer.analyze_completion_patterns(task_history)
-    feedback_repo.update_patterns(completion_stats)
-
-    # Analyze temporal patterns
-    temporal_data = temporal_analyzer.analyze_patterns(task_history)
-    feedback_repo.update_temporal(temporal_data)
-
-    print("[INFO] Daily pattern analysis completed.")
+        
+        feedback_repo.update_patterns(completion_stats)
+        feedback_repo.update_temporal(temporal_data)
+        
+        print("[INFO] Daily pattern analysis completed successfully")
+        
+    except Exception as e:
+        print(f"[ERROR] Daily pattern analysis failed: {e}")
 
 
 # ---------------------------------------------------------------------------
 # Main executable (example usage)
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    # Get API key from environment
+    gemini_api_key = os.getenv('GOOGLE_API_KEY')
+    if not gemini_api_key:
+        raise ValueError("GOOGLE_API_KEY environment variable is not set")
+
     # Instantiate all components
     github_monitor = GitHubActivityMonitor(GITHUB_TOKEN, GITHUB_REPO)
     user_tracker = UserInteractionTracker()
@@ -649,7 +838,7 @@ if __name__ == "__main__":
     feedback_collector = FeedbackCollector(github_monitor, user_tracker, temporal_analyzer)
     feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
     context_aggregator = ContextAggregator()
-    llm_service = LLMService(api_key="YOUR_KEY_HERE")  # replace with real key
+    llm_service = LLMService(api_key=gemini_api_key)  # Use environment variable instead of placeholder
 
     task_analyzer = TaskAnalysisService()
 
