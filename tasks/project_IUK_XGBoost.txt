@@ -26,4 +26,5 @@ a subset of phenotypically-constrained cases which represent low-risk individual
 <subtasks and deadlines>
 contained in the inbox.csv folder
 the label associated with this project is @Dundee_Colab
+note: this task is predicated on HIC access that ends on 020125. therefore THIS TASK PRECEDES ALL OTHERS UP TO THAT TIME!!!
 </subtasks and deadlines>

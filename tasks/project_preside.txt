@@ -18,4 +18,5 @@ contained within document: preside_pid_text.txt
 <current status>
 initial meeting planned in December was cancelled
 new date for kick-off meeting in January 2025 - aim to get LPAC drafted for this meeting
+need to put together a draft LPAC
 </current status>

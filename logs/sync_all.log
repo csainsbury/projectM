@@ -1,1 +1,188 @@
-/bin/bash: /Users/csainsbury/Documents/projectM/sync_all.sh: Operation not permitted
+2024-12-27 20:00:02,217 - projectM - INFO - Starting sync with pattern: all
+2024-12-27 20:00:02,763 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-27 20:00:02,763 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-27 20:00:02,763 - projectM - INFO - Found 20 files to sync: ['CAUSALFound_proposal_2_methods_in_detail.txt', 'project_NWLondon_dataAnalysis.txt', 'metamodel_documentation.txt', 'project_timeAwareFoundationModel.txt', 'CAUSALFound_proposal_1_overview.txt', 'preside_PID_text_2.txt', 'system_prompt.txt', 'project_MWDH_metamodels.txt', 'project_preproject_ideas.txt', 'CAUSALFound_4_prose_summary.txt', 'character_description.txt', 'project_IUK_XGBoost.txt', 'CAUSALFound_proposal_3_inference_utility.txt', 'metamodel_appendix_1.txt', 'metamodel_algorithm_summary.txt', 'project_CAUSALFound.txt', 'project_preside.txt', 'Chrono-CIGHT_working.txt', 'inbox_tasks.json', 'vae_method.txt']
+2024-12-27 20:00:03,319 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:03,320 - projectM - INFO - Successfully read CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:03,323 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:03,956 - projectM - INFO - Changes detected, updating tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:04,936 - projectM - INFO - File not found in GitHub, creating new: tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:06,358 - projectM - ERROR - Error processing CAUSALFound_proposal_2_methods_in_detail.txt: 422 {"message": "Invalid request.\n\n\"sha\" wasn't supplied.", "documentation_url": "https://docs.github.com/rest/repos/contents#create-or-update-file-contents", "status": "422"}
+2024-12-27 20:00:11,647 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:11,647 - projectM - INFO - Successfully read CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:11,647 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:12,331 - projectM - INFO - Changes detected, updating tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:13,323 - projectM - INFO - Successfully updated CAUSALFound_proposal_2_methods_in_detail.txt in GitHub
+2024-12-27 20:00:13,323 - projectM - INFO - Sync complete for CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 20:00:14,666 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_NWLondon_dataAnalysis.txt
+2024-12-27 20:00:14,667 - projectM - INFO - Successfully read project_NWLondon_dataAnalysis.txt
+2024-12-27 20:00:14,668 - projectM - INFO - Checking for existing file in GitHub: tasks/project_NWLondon_dataAnalysis.txt
+2024-12-27 20:00:15,283 - projectM - INFO - No changes detected for project_NWLondon_dataAnalysis.txt, skipping update
+2024-12-27 20:00:15,872 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/metamodel_documentation.txt
+2024-12-27 20:00:15,889 - projectM - INFO - Successfully read metamodel_documentation.txt
+2024-12-27 20:00:15,889 - projectM - INFO - Checking for existing file in GitHub: tasks/metamodel_documentation.txt
+2024-12-27 20:00:16,521 - projectM - INFO - No changes detected for metamodel_documentation.txt, skipping update
+2024-12-27 20:00:17,091 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_timeAwareFoundationModel.txt
+2024-12-27 20:00:17,092 - projectM - INFO - Successfully read project_timeAwareFoundationModel.txt
+2024-12-27 20:00:17,092 - projectM - INFO - Checking for existing file in GitHub: tasks/project_timeAwareFoundationModel.txt
+2024-12-27 20:00:17,747 - projectM - INFO - No changes detected for project_timeAwareFoundationModel.txt, skipping update
+2024-12-27 20:00:18,346 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_proposal_1_overview.txt
+2024-12-27 20:00:18,347 - projectM - INFO - Successfully read CAUSALFound_proposal_1_overview.txt
+2024-12-27 20:00:18,347 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_proposal_1_overview.txt
+2024-12-27 20:00:18,999 - projectM - INFO - Changes detected, updating tasks/CAUSALFound_proposal_1_overview.txt
+2024-12-27 20:00:19,979 - projectM - INFO - Successfully updated CAUSALFound_proposal_1_overview.txt in GitHub
+2024-12-27 20:00:19,979 - projectM - INFO - Sync complete for CAUSALFound_proposal_1_overview.txt
+2024-12-27 20:00:21,270 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/preside_PID_text_2.txt
+2024-12-27 20:00:21,271 - projectM - INFO - Successfully read preside_PID_text_2.txt
+2024-12-27 20:00:21,272 - projectM - INFO - Checking for existing file in GitHub: tasks/preside_PID_text_2.txt
+2024-12-27 20:00:22,035 - projectM - INFO - No changes detected for preside_PID_text_2.txt, skipping update
+2024-12-27 20:00:22,591 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/system_prompt.txt
+2024-12-27 20:00:22,592 - projectM - INFO - Successfully read system_prompt.txt
+2024-12-27 20:00:22,592 - projectM - INFO - Checking for existing file in GitHub: tasks/system_prompt.txt
+2024-12-27 20:00:23,242 - projectM - INFO - No changes detected for system_prompt.txt, skipping update
+2024-12-27 20:00:23,819 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_MWDH_metamodels.txt
+2024-12-27 20:00:23,821 - projectM - INFO - Successfully read project_MWDH_metamodels.txt
+2024-12-27 20:00:23,821 - projectM - INFO - Checking for existing file in GitHub: tasks/project_MWDH_metamodels.txt
+2024-12-27 20:00:24,481 - projectM - INFO - No changes detected for project_MWDH_metamodels.txt, skipping update
+2024-12-27 20:00:25,066 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_preproject_ideas.txt
+2024-12-27 20:00:25,067 - projectM - INFO - Successfully read project_preproject_ideas.txt
+2024-12-27 20:00:25,067 - projectM - INFO - Checking for existing file in GitHub: tasks/project_preproject_ideas.txt
+2024-12-27 20:00:25,686 - projectM - INFO - No changes detected for project_preproject_ideas.txt, skipping update
+2024-12-27 20:00:26,292 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_4_prose_summary.txt
+2024-12-27 20:00:26,294 - projectM - INFO - Successfully read CAUSALFound_4_prose_summary.txt
+2024-12-27 20:00:26,294 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_4_prose_summary.txt
+2024-12-27 20:00:26,942 - projectM - INFO - Changes detected, updating tasks/CAUSALFound_4_prose_summary.txt
+2024-12-27 20:00:27,645 - projectM - INFO - Successfully updated CAUSALFound_4_prose_summary.txt in GitHub
+2024-12-27 20:00:27,645 - projectM - INFO - Sync complete for CAUSALFound_4_prose_summary.txt
+2024-12-27 20:00:28,959 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/character_description.txt
+2024-12-27 20:00:28,960 - projectM - INFO - Successfully read character_description.txt
+2024-12-27 20:00:28,960 - projectM - INFO - Checking for existing file in GitHub: tasks/character_description.txt
+2024-12-27 20:00:29,536 - projectM - INFO - No changes detected for character_description.txt, skipping update
+2024-12-27 20:00:30,066 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_IUK_XGBoost.txt
+2024-12-27 20:00:30,067 - projectM - INFO - Successfully read project_IUK_XGBoost.txt
+2024-12-27 20:00:30,068 - projectM - INFO - Checking for existing file in GitHub: tasks/project_IUK_XGBoost.txt
+2024-12-27 20:00:30,677 - projectM - INFO - Changes detected, updating tasks/project_IUK_XGBoost.txt
+2024-12-27 20:00:31,461 - projectM - INFO - Successfully updated project_IUK_XGBoost.txt in GitHub
+2024-12-27 20:00:31,461 - projectM - INFO - Sync complete for project_IUK_XGBoost.txt
+2024-12-27 20:00:32,769 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_proposal_3_inference_utility.txt
+2024-12-27 20:00:32,770 - projectM - INFO - Successfully read CAUSALFound_proposal_3_inference_utility.txt
+2024-12-27 20:00:32,770 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_proposal_3_inference_utility.txt
+2024-12-27 20:00:33,355 - projectM - INFO - Changes detected, updating tasks/CAUSALFound_proposal_3_inference_utility.txt
+2024-12-27 20:00:34,222 - projectM - INFO - Successfully updated CAUSALFound_proposal_3_inference_utility.txt in GitHub
+2024-12-27 20:00:34,222 - projectM - INFO - Sync complete for CAUSALFound_proposal_3_inference_utility.txt
+2024-12-27 20:00:35,536 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/metamodel_appendix_1.txt
+2024-12-27 20:00:35,537 - projectM - INFO - Successfully read metamodel_appendix_1.txt
+2024-12-27 20:00:35,537 - projectM - INFO - Checking for existing file in GitHub: tasks/metamodel_appendix_1.txt
+2024-12-27 20:00:36,123 - projectM - INFO - No changes detected for metamodel_appendix_1.txt, skipping update
+2024-12-27 20:00:36,685 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/metamodel_algorithm_summary.txt
+2024-12-27 20:00:36,686 - projectM - INFO - Successfully read metamodel_algorithm_summary.txt
+2024-12-27 20:00:36,686 - projectM - INFO - Checking for existing file in GitHub: tasks/metamodel_algorithm_summary.txt
+2024-12-27 20:00:37,271 - projectM - INFO - No changes detected for metamodel_algorithm_summary.txt, skipping update
+2024-12-27 20:00:37,793 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_CAUSALFound.txt
+2024-12-27 20:00:37,794 - projectM - INFO - Successfully read project_CAUSALFound.txt
+2024-12-27 20:00:37,794 - projectM - INFO - Checking for existing file in GitHub: tasks/project_CAUSALFound.txt
+2024-12-27 20:00:38,409 - projectM - INFO - No changes detected for project_CAUSALFound.txt, skipping update
+2024-12-27 20:00:39,024 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_preside.txt
+2024-12-27 20:00:39,024 - projectM - INFO - Successfully read project_preside.txt
+2024-12-27 20:00:39,025 - projectM - INFO - Checking for existing file in GitHub: tasks/project_preside.txt
+2024-12-27 20:00:39,616 - projectM - INFO - No changes detected for project_preside.txt, skipping update
+2024-12-27 20:00:40,244 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/Chrono-CIGHT_working.txt
+2024-12-27 20:00:40,245 - projectM - INFO - Successfully read Chrono-CIGHT_working.txt
+2024-12-27 20:00:40,245 - projectM - INFO - Checking for existing file in GitHub: tasks/Chrono-CIGHT_working.txt
+2024-12-27 20:00:40,855 - projectM - INFO - Changes detected, updating tasks/Chrono-CIGHT_working.txt
+2024-12-27 20:00:41,786 - projectM - INFO - Successfully updated Chrono-CIGHT_working.txt in GitHub
+2024-12-27 20:00:41,786 - projectM - INFO - Sync complete for Chrono-CIGHT_working.txt
+2024-12-27 20:00:43,118 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-27 20:00:43,119 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-27 20:00:43,119 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-27 20:00:43,741 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-27 20:00:44,303 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/vae_method.txt
+2024-12-27 20:00:44,304 - projectM - INFO - Successfully read vae_method.txt
+2024-12-27 20:00:44,304 - projectM - INFO - Checking for existing file in GitHub: tasks/vae_method.txt
+2024-12-27 20:00:44,936 - projectM - INFO - No changes detected for vae_method.txt, skipping update
+2024-12-27 21:00:02,306 - projectM - INFO - Starting sync with pattern: all
+2024-12-27 21:00:02,684 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-27 21:00:02,685 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-27 21:00:02,685 - projectM - INFO - Found 20 files to sync: ['CAUSALFound_proposal_2_methods_in_detail.txt', 'project_NWLondon_dataAnalysis.txt', 'metamodel_documentation.txt', 'project_timeAwareFoundationModel.txt', 'CAUSALFound_proposal_1_overview.txt', 'preside_PID_text_2.txt', 'system_prompt.txt', 'project_MWDH_metamodels.txt', 'project_preproject_ideas.txt', 'CAUSALFound_4_prose_summary.txt', 'character_description.txt', 'project_IUK_XGBoost.txt', 'CAUSALFound_proposal_3_inference_utility.txt', 'metamodel_appendix_1.txt', 'metamodel_algorithm_summary.txt', 'project_CAUSALFound.txt', 'project_preside.txt', 'Chrono-CIGHT_working.txt', 'inbox_tasks.json', 'vae_method.txt']
+2024-12-27 21:00:03,173 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 21:00:03,173 - projectM - INFO - Successfully read CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 21:00:03,174 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_proposal_2_methods_in_detail.txt
+2024-12-27 21:00:03,709 - projectM - INFO - No changes detected for CAUSALFound_proposal_2_methods_in_detail.txt, skipping update
+2024-12-27 21:00:04,180 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_NWLondon_dataAnalysis.txt
+2024-12-27 21:00:04,180 - projectM - INFO - Successfully read project_NWLondon_dataAnalysis.txt
+2024-12-27 21:00:04,180 - projectM - INFO - Checking for existing file in GitHub: tasks/project_NWLondon_dataAnalysis.txt
+2024-12-27 21:00:04,749 - projectM - INFO - No changes detected for project_NWLondon_dataAnalysis.txt, skipping update
+2024-12-27 21:00:05,213 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/metamodel_documentation.txt
+2024-12-27 21:00:05,221 - projectM - INFO - Successfully read metamodel_documentation.txt
+2024-12-27 21:00:05,221 - projectM - INFO - Checking for existing file in GitHub: tasks/metamodel_documentation.txt
+2024-12-27 21:00:05,737 - projectM - INFO - No changes detected for metamodel_documentation.txt, skipping update
+2024-12-27 21:00:06,197 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_timeAwareFoundationModel.txt
+2024-12-27 21:00:06,197 - projectM - INFO - Successfully read project_timeAwareFoundationModel.txt
+2024-12-27 21:00:06,197 - projectM - INFO - Checking for existing file in GitHub: tasks/project_timeAwareFoundationModel.txt
+2024-12-27 21:00:06,724 - projectM - INFO - No changes detected for project_timeAwareFoundationModel.txt, skipping update
+2024-12-27 21:00:07,174 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_proposal_1_overview.txt
+2024-12-27 21:00:07,175 - projectM - INFO - Successfully read CAUSALFound_proposal_1_overview.txt
+2024-12-27 21:00:07,175 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_proposal_1_overview.txt
+2024-12-27 21:00:07,699 - projectM - INFO - No changes detected for CAUSALFound_proposal_1_overview.txt, skipping update
+2024-12-27 21:00:08,179 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/preside_PID_text_2.txt
+2024-12-27 21:00:08,180 - projectM - INFO - Successfully read preside_PID_text_2.txt
+2024-12-27 21:00:08,180 - projectM - INFO - Checking for existing file in GitHub: tasks/preside_PID_text_2.txt
+2024-12-27 21:00:08,731 - projectM - INFO - No changes detected for preside_PID_text_2.txt, skipping update
+2024-12-27 21:00:09,213 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/system_prompt.txt
+2024-12-27 21:00:09,214 - projectM - INFO - Successfully read system_prompt.txt
+2024-12-27 21:00:09,214 - projectM - INFO - Checking for existing file in GitHub: tasks/system_prompt.txt
+2024-12-27 21:00:09,805 - projectM - INFO - No changes detected for system_prompt.txt, skipping update
+2024-12-27 21:00:10,221 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_MWDH_metamodels.txt
+2024-12-27 21:00:10,222 - projectM - INFO - Successfully read project_MWDH_metamodels.txt
+2024-12-27 21:00:10,222 - projectM - INFO - Checking for existing file in GitHub: tasks/project_MWDH_metamodels.txt
+2024-12-27 21:00:10,746 - projectM - INFO - No changes detected for project_MWDH_metamodels.txt, skipping update
+2024-12-27 21:00:11,235 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_preproject_ideas.txt
+2024-12-27 21:00:11,236 - projectM - INFO - Successfully read project_preproject_ideas.txt
+2024-12-27 21:00:11,236 - projectM - INFO - Checking for existing file in GitHub: tasks/project_preproject_ideas.txt
+2024-12-27 21:00:11,773 - projectM - INFO - No changes detected for project_preproject_ideas.txt, skipping update
+2024-12-27 21:00:12,225 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_4_prose_summary.txt
+2024-12-27 21:00:12,226 - projectM - INFO - Successfully read CAUSALFound_4_prose_summary.txt
+2024-12-27 21:00:12,226 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_4_prose_summary.txt
+2024-12-27 21:00:12,765 - projectM - INFO - No changes detected for CAUSALFound_4_prose_summary.txt, skipping update
+2024-12-27 21:00:13,226 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/character_description.txt
+2024-12-27 21:00:13,227 - projectM - INFO - Successfully read character_description.txt
+2024-12-27 21:00:13,227 - projectM - INFO - Checking for existing file in GitHub: tasks/character_description.txt
+2024-12-27 21:00:13,723 - projectM - INFO - No changes detected for character_description.txt, skipping update
+2024-12-27 21:00:14,192 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_IUK_XGBoost.txt
+2024-12-27 21:00:14,193 - projectM - INFO - Successfully read project_IUK_XGBoost.txt
+2024-12-27 21:00:14,193 - projectM - INFO - Checking for existing file in GitHub: tasks/project_IUK_XGBoost.txt
+2024-12-27 21:00:14,724 - projectM - INFO - No changes detected for project_IUK_XGBoost.txt, skipping update
+2024-12-27 21:00:15,214 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/CAUSALFound_proposal_3_inference_utility.txt
+2024-12-27 21:00:15,215 - projectM - INFO - Successfully read CAUSALFound_proposal_3_inference_utility.txt
+2024-12-27 21:00:15,215 - projectM - INFO - Checking for existing file in GitHub: tasks/CAUSALFound_proposal_3_inference_utility.txt
+2024-12-27 21:00:15,729 - projectM - INFO - No changes detected for CAUSALFound_proposal_3_inference_utility.txt, skipping update
+2024-12-27 21:00:16,184 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/metamodel_appendix_1.txt
+2024-12-27 21:00:16,185 - projectM - INFO - Successfully read metamodel_appendix_1.txt
+2024-12-27 21:00:16,185 - projectM - INFO - Checking for existing file in GitHub: tasks/metamodel_appendix_1.txt
+2024-12-27 21:00:16,695 - projectM - INFO - No changes detected for metamodel_appendix_1.txt, skipping update
+2024-12-27 21:00:17,146 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/metamodel_algorithm_summary.txt
+2024-12-27 21:00:17,147 - projectM - INFO - Successfully read metamodel_algorithm_summary.txt
+2024-12-27 21:00:17,147 - projectM - INFO - Checking for existing file in GitHub: tasks/metamodel_algorithm_summary.txt
+2024-12-27 21:00:17,670 - projectM - INFO - No changes detected for metamodel_algorithm_summary.txt, skipping update
+2024-12-27 21:00:18,125 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_CAUSALFound.txt
+2024-12-27 21:00:18,126 - projectM - INFO - Successfully read project_CAUSALFound.txt
+2024-12-27 21:00:18,127 - projectM - INFO - Checking for existing file in GitHub: tasks/project_CAUSALFound.txt
+2024-12-27 21:00:18,701 - projectM - INFO - No changes detected for project_CAUSALFound.txt, skipping update
+2024-12-27 21:00:19,180 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/project_preside.txt
+2024-12-27 21:00:19,181 - projectM - INFO - Successfully read project_preside.txt
+2024-12-27 21:00:19,181 - projectM - INFO - Checking for existing file in GitHub: tasks/project_preside.txt
+2024-12-27 21:00:19,718 - projectM - INFO - Changes detected, updating tasks/project_preside.txt
+2024-12-27 21:00:20,555 - projectM - INFO - Successfully updated project_preside.txt in GitHub
+2024-12-27 21:00:20,556 - projectM - INFO - Sync complete for project_preside.txt
+2024-12-27 21:00:21,781 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/Chrono-CIGHT_working.txt
+2024-12-27 21:00:21,782 - projectM - INFO - Successfully read Chrono-CIGHT_working.txt
+2024-12-27 21:00:21,782 - projectM - INFO - Checking for existing file in GitHub: tasks/Chrono-CIGHT_working.txt
+2024-12-27 21:00:22,341 - projectM - INFO - No changes detected for Chrono-CIGHT_working.txt, skipping update
+2024-12-27 21:00:22,845 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-27 21:00:22,847 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-27 21:00:22,847 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-27 21:00:23,389 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-27 21:00:23,826 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/vae_method.txt
+2024-12-27 21:00:23,827 - projectM - INFO - Successfully read vae_method.txt
+2024-12-27 21:00:23,827 - projectM - INFO - Checking for existing file in GitHub: tasks/vae_method.txt
+2024-12-27 21:00:24,397 - projectM - INFO - No changes detected for vae_method.txt, skipping update

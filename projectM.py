@@ -35,7 +35,7 @@ from github import Github
 from github.Repository import Repository
 from dotenv import load_dotenv
 from functools import lru_cache
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 import logging
 import sys
 from flask import Flask, render_template, request, jsonify
@@ -169,41 +169,57 @@ class GitHubActivityMonitor:
 
     def get_tasks(self) -> dict:
         """Get tasks with caching"""
-        cached_tasks = state_manager.get_cache('tasks')
-        if cached_tasks:
-            return cached_tasks
-
         try:
             tasks_content = {
                 "tasks": [],
                 "raw_contents": {}
             }
 
+            logger.info("Starting task retrieval from GitHub")
+            
             # Get all contents from the tasks directory
             contents = self.resource_manager.repo.get_contents("tasks")
+            logger.info(f"Found {len(contents)} files in tasks directory")
             
-            # Recursively process all JSON files in the tasks directory
+            # Process all files in the tasks directory
             for content in contents:
-                if content.path.endswith('.json'):
-                    try:
-                        file_content = content.decoded_content.decode()
+                try:
+                    logger.info(f"Processing file: {content.path}")
+                    file_content = content.decoded_content.decode()
+                    
+                    # Handle JSON files
+                    if content.path.endswith('.json'):
+                        logger.info(f"Processing JSON file: {content.path}")
                         parsed = json.loads(file_content)
-                        
-                        # If it's a task file, add to tasks list
                         if isinstance(parsed, dict) and "tasks" in parsed:
                             tasks_content["tasks"].extend(parsed["tasks"])
+                            logger.info(f"Added {len(parsed['tasks'])} tasks from {content.path}")
                         elif isinstance(parsed, list):
-                            # If it's a direct list of tasks
                             tasks_content["tasks"].extend(parsed)
-                            
-                        tasks_content["raw_contents"][content.path] = parsed
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Error parsing JSON from {content.path}: {e}")
-                    except Exception as e:
-                        logger.error(f"Error processing {content.path}: {e}")
+                            logger.info(f"Added {len(parsed)} tasks from {content.path}")
+                    
+                    # Handle TXT files
+                    elif content.path.endswith('.txt'):
+                        logger.info(f"Processing TXT file: {content.path}")
+                        # Add text files as tasks with their content
+                        task = {
+                            "id": os.path.splitext(os.path.basename(content.path))[0],
+                            "type": "text",
+                            "content": file_content,
+                            "created_at": content.last_modified,
+                            "filename": content.path
+                        }
+                        tasks_content["tasks"].append(task)
+                        logger.info(f"Added text task from {content.path}")
+                    
+                    tasks_content["raw_contents"][content.path] = file_content
+                    
+                except Exception as e:
+                    logger.error(f"Error processing {content.path}: {e}")
+                    continue
 
-            logger.info(f"Found {len(tasks_content['tasks'])} tasks in repository")
-            state_manager.set_cache('tasks', tasks_content)
+            logger.info(f"Found {len(tasks_content['tasks'])} total tasks")
+            logger.info(f"Task content sample: {str(tasks_content['tasks'][:1])}")
             return tasks_content
             
         except Exception as e:
@@ -518,92 +534,74 @@ class ContextAggregator:
         self.github_monitor = github_monitor
         
     def aggregate_context(self, query: str, repo_contents: dict) -> dict:
-        """
-        Aggregate context from various sources for the LLM
-        
-        :param query: The user's query
-        :param repo_contents: Repository contents and feedback data
-        :return: Aggregated context dictionary
-        """
+        """Aggregate context from various sources for the LLM"""
         try:
-            # Extract tasks and other relevant data
-            tasks = repo_contents.get("tasks_content", {}).get("tasks", [])
+            # Get tasks and feedback data
+            tasks = repo_contents.get("tasks", [])
+            logger.info(f"Aggregating context with {len(tasks)} tasks")
             
-            # Build context dictionary
+            # Load feedback data
+            action_outcomes = self._load_feedback_data()
+            success_patterns = self._load_success_patterns()
+            temporal_analysis = self._load_temporal_analysis()
+            
+            # Build context dictionary with feedback
             context = {
                 "user_query": query,
                 "repo_info": {
                     "tasks": tasks,
-                    "action_outcomes": repo_contents.get("action_outcomes", []),
-                    "success_patterns": repo_contents.get("success_patterns", {}),
-                    "temporal_analysis": repo_contents.get("temporal_analysis", {})
+                    "feedback": {
+                        "action_outcomes": action_outcomes,
+                        "success_patterns": success_patterns,
+                        "temporal_analysis": temporal_analysis
+                    }
                 }
             }
             
-            logger.info(f"Successfully aggregated context for query: {query}")
+            logger.info(f"Context built with {len(tasks)} tasks and feedback data")
             return context
             
         except Exception as e:
             logger.error(f"Error aggregating context: {e}")
             raise
 
-    def get_feedback_context(self):
-        """Get feedback context with caching"""
-        cached_context = state_manager.get_cache('feedback_context')
-        if cached_context:
-            return cached_context
-
+    def _load_feedback_data(self) -> list:
+        """Load action outcomes from feedback file"""
         try:
-            tasks_content = self.github_monitor.get_tasks()
-            feedback_context = {
-                "tasks_content": tasks_content,
-                "action_outcomes": self._load_outcomes(),
-                "success_patterns": self._load_patterns(),
-                "temporal_analysis": self._load_temporal()
-            }
-            
-            state_manager.set_cache('feedback_context', feedback_context)
-            return feedback_context
+            outcomes = []
+            feedback_path = os.path.join('feedback', 'action_outcomes.jsonl')
+            if os.path.exists(feedback_path):
+                with jsonlines.open(feedback_path) as reader:
+                    for line in reader:
+                        outcomes.append(line)
+            return outcomes
         except Exception as e:
-            logger.error(f"Error getting feedback context: {e}")
-            raise
-
-    def _load_outcomes(self):
-        """Load outcomes with error handling"""
-        try:
-            return self._load_json_file(ACTION_OUTCOMES_FILE)
-        except Exception as e:
-            logger.error(f"Error loading outcomes: {e}")
+            logger.error(f"Error loading feedback data: {e}")
             return []
 
-    def _load_patterns(self):
-        """Load patterns with error handling"""
+    def _load_success_patterns(self) -> dict:
+        """Load success patterns from feedback"""
         try:
-            return self._load_json_file(SUCCESS_PATTERNS_FILE)
+            patterns_path = os.path.join('feedback', 'success_patterns.json')
+            if os.path.exists(patterns_path):
+                with open(patterns_path, 'r') as f:
+                    return json.load(f)
+            return {}
         except Exception as e:
-            logger.error(f"Error loading patterns: {e}")
+            logger.error(f"Error loading success patterns: {e}")
             return {}
 
-    def _load_temporal(self):
-        """Load temporal analysis with error handling"""
+    def _load_temporal_analysis(self) -> dict:
+        """Load temporal analysis from feedback"""
         try:
-            return self._load_json_file(TEMPORAL_ANALYSIS_FILE)
+            analysis_path = os.path.join('feedback', 'temporal_analysis.json')
+            if os.path.exists(analysis_path):
+                with open(analysis_path, 'r') as f:
+                    return json.load(f)
+            return {}
         except Exception as e:
             logger.error(f"Error loading temporal analysis: {e}")
             return {}
-
-    @staticmethod
-    def _load_json_file(filepath):
-        """Load JSON file with proper error handling"""
-        try:
-            with open(filepath, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            logger.warning(f"File not found: {filepath}")
-            return {} if filepath.endswith('.json') else []
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing JSON from {filepath}: {e}")
-            return {} if filepath.endswith('.json') else []
 
 
 # ---------------------------------------------------------------------------
@@ -626,14 +624,44 @@ class LLMService:
         Construct a prompt from the context, call Gemini, and return an actionable suggestion.
         """
         user_query = context.get("user_query", "No user query provided.")
+        tasks = context.get('repo_info', {}).get('tasks', [])
+        feedback_data = context.get('repo_info', {}).get('feedback', {})
+        
+        # Format tasks for better readability
+        formatted_tasks = []
+        for task in tasks:
+            if isinstance(task, dict):
+                if task.get('type') == 'text':
+                    # For text files, include a summary
+                    formatted_tasks.append({
+                        'id': task.get('id'),
+                        'type': 'text',
+                        'summary': task.get('content', '')[:200] + '...' if len(task.get('content', '')) > 200 else task.get('content', '')
+                    })
+                else:
+                    # For JSON tasks, include all fields
+                    formatted_tasks.append(task)
         
         prompt_text = f"""
 User Query: {user_query}
 
-Repository Context:
-{json.dumps(context.get('repo_info', {}), indent=2)}
+Available Tasks:
+{json.dumps(formatted_tasks, indent=2)}
 
-Please analyze the above context and suggest next best actions.
+Historical Feedback:
+Action Outcomes: {json.dumps(feedback_data.get('action_outcomes', []), indent=2)}
+Success Patterns: {json.dumps(feedback_data.get('success_patterns', {}), indent=2)}
+Temporal Analysis: {json.dumps(feedback_data.get('temporal_analysis', {}), indent=2)}
+
+Please analyze the above context, including available tasks, historical feedback, and patterns, to suggest next best actions.
+Consider:
+1. Available tasks and their content
+2. Past successful task completions
+3. Temporal patterns in task success
+4. Historical action outcomes
+5. Current task priorities and dependencies
+
+Provide a detailed suggestion based on this comprehensive context.
 """
 
         print("\n=== Final Prompt Being Sent to LLM ===")
@@ -773,10 +801,8 @@ class TaskAnalysisService:
 # CLASS: ActionSuggestionSystem
 # ---------------------------------------------------------------------------
 class ActionSuggestionSystem:
-    """
-    Main application class for processing user queries (multiple projects) and updating feedback.
-    """
-
+    """Main application class for processing user queries and updating feedback."""
+    
     def __init__(self,
                  llm_service: LLMService,
                  context_aggregator: ContextAggregator,
@@ -793,27 +819,22 @@ class ActionSuggestionSystem:
         self.user_tracker = user_tracker
         self.temporal_analyzer = temporal_analyzer
 
-    def process_query(self, user_query):
-        """
-        Pull latest data, aggregate context, and generate suggestion from LLM.
-        """
-        # 1. Get feedback context from the GitHub repository
-        feedback_context = self.context_aggregator.get_feedback_context()
-
-        # 2. Combine the user_query + feedback context
-        final_context = self.context_aggregator.aggregate_context(
-            user_query,
-            repo_contents=feedback_context
-        )
-
-        # 3. Generate suggestion using LLM
-        suggestion_text = self.llm_service.generate_suggestion(final_context)
-
-        # 4. Track the suggestion
-        suggestion_id = f"suggestion-{int(time.time())}"
-        self.user_tracker.track_interactions(suggestion_id)
-
-        return suggestion_text
+    def process_query(self, query: str) -> str:
+        """Process a user query and return a suggestion"""
+        try:
+            # Get repository contents
+            repo_contents = self.context_aggregator.github_monitor.get_tasks()
+            
+            # Aggregate context with feedback
+            context = self.context_aggregator.aggregate_context(query, repo_contents)
+            
+            # Generate suggestion
+            suggestion = self.llm_service.generate_suggestion(context)
+            
+            return suggestion
+        except Exception as e:
+            logger.error(f"Error processing query: {e}")
+            raise
 
     def update_feedback(self):
         """
@@ -939,20 +960,29 @@ def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
 # ---------------------------------------------------------------------------
 # Main initialization
 # ---------------------------------------------------------------------------
-def initialize_system():
-    """Initialize system with proper resource management"""
+def initialize_system() -> 'ActionSuggestionSystem':
+    """Initialize the complete system with all required components"""
     try:
+        # Initialize GitHub components
         resource_manager = GitHubResourceManager(GITHUB_TOKEN, GITHUB_REPO)
         github_monitor = GitHubActivityMonitor(resource_manager)
+        
+        # Initialize other components
         context_aggregator = ContextAggregator(github_monitor)
+        llm_service = LLMService()
+        feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
+        feedback_collector = FeedbackCollector(
+            github_monitor, 
+            UserInteractionTracker(), 
+            TemporalAnalysis()
+        )
         
-        # Initialize other components...
-        
+        # Create and return the main system
         return ActionSuggestionSystem(
-            llm_service=LLMService(),
+            llm_service=llm_service,
             context_aggregator=context_aggregator,
-            feedback_repo=FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO),
-            feedback_collector=FeedbackCollector(github_monitor, UserInteractionTracker(), TemporalAnalysis()),
+            feedback_repo=feedback_repo,
+            feedback_collector=feedback_collector,
             task_analyzer=TaskAnalysisService(),
             user_tracker=UserInteractionTracker(),
             temporal_analyzer=TemporalAnalysis()
@@ -1007,27 +1037,50 @@ def handle_query():
         logger.info(f"Request data: {data}")
         
         query = data.get('query', '')
-        time_window = data.get('timeWindow', 7)
-        priority = data.get('priority', 'all')
         
-        logger.info(f"Processing query: {query} (time_window={time_window}, priority={priority})")
-        
-        # Initialize system if needed
-        system = initialize_system()
-        
-        # Process query with parameters
-        suggestion = system.process_query(query)
-        logger.info(f"Generated suggestion: {suggestion}")
-        
-        return jsonify({
-            'success': True,
-            'suggestion': suggestion
-        })
+        # Initialize system
+        try:
+            system = initialize_system()
+            logger.info("System initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize system: {e}")
+            return jsonify({
+                'success': False,
+                'error': 'System initialization failed'
+            }), 500
+
+        try:
+            # Get repository contents including tasks and feedback
+            repo_contents = system.context_aggregator.github_monitor.get_tasks()
+            logger.info(f"Retrieved {len(repo_contents.get('tasks', []))} tasks from GitHub")
+            
+            # Aggregate context with feedback
+            context = system.context_aggregator.aggregate_context(query, repo_contents)
+            logger.info("Context aggregated successfully")
+            
+            # Log the context being sent to LLM
+            logger.info(f"Sending context to LLM with {len(context['repo_info']['tasks'])} tasks")
+            
+            # Generate suggestion using LLM
+            suggestion = system.llm_service.generate_suggestion(context)
+            logger.info("Generated suggestion successfully")
+            
+            return jsonify({
+                'success': True,
+                'suggestion': suggestion
+            })
+        except Exception as e:
+            logger.error(f"Error processing query: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+            
     except Exception as e:
-        logger.error(f"Error processing query: {str(e)}", exc_info=True)
+        logger.error(f"Error handling request: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Internal server error'
         }), 500
 
 # Add this function to handle periodic GitHub updates

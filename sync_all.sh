@@ -4,10 +4,12 @@
 export PATH="/Users/csainsbury/anaconda3/bin:$PATH"
 
 # Activate conda environment
-source activate projectM
+source /Users/csainsbury/anaconda3/etc/profile.d/conda.sh
+conda activate projectM
 
 # Add the directory containing projectM.py to PYTHONPATH
-export PYTHONPATH="/Users/csainsbury/projectM:$PYTHONPATH"
+cd /Users/csainsbury/Documents/projectM
+export PYTHONPATH="${PWD}:${PYTHONPATH}"
 
-# Run the python command - note the changed import path
-/Users/csainsbury/anaconda3/envs/projectM/bin/python -c "import sys; sys.path.append('/Users/csainsbury/projectM'); from projectM import sync_local_to_github; sync_local_to_github('all')" 
+# Run the python command
+python -c "from projectM import sync_local_to_github; sync_local_to_github('all')" 
