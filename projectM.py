@@ -38,6 +38,8 @@ from functools import lru_cache
 from typing import Optional, Dict, List
 import logging
 import sys
+from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 
 # Configure logging
 logging.basicConfig(
@@ -986,36 +988,109 @@ def ensure_directories():
 # ---------------------------------------------------------------------------
 # Main execution
 # ---------------------------------------------------------------------------
+app = Flask(__name__, static_folder='static')
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+@app.route('/')
+def index():
+    """Serve the main HTML interface"""
+    return render_template('index.html')
+
+@app.route('/api/query', methods=['POST'])
+def handle_query():
+    """Handle API requests from the frontend"""
+    try:
+        logger.info("Received query request")
+        data = request.json
+        logger.info(f"Request data: {data}")
+        
+        query = data.get('query', '')
+        time_window = data.get('timeWindow', 7)
+        priority = data.get('priority', 'all')
+        
+        logger.info(f"Processing query: {query} (time_window={time_window}, priority={priority})")
+        
+        # Initialize system if needed
+        system = initialize_system()
+        
+        # Process query with parameters
+        suggestion = system.process_query(query)
+        logger.info(f"Generated suggestion: {suggestion}")
+        
+        return jsonify({
+            'success': True,
+            'suggestion': suggestion
+        })
+    except Exception as e:
+        logger.error(f"Error processing query: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Add this function to handle periodic GitHub updates
+def sync_local_to_github(file_pattern='inbox'):
+    """Sync local task files to GitHub repository
+    
+    Args:
+        file_pattern (str): 'inbox' for inbox_tasks.json only, 'all' for all task files
+    """
+    try:
+        github_token = os.getenv('GITHUB_TOKEN')
+        repo = Github(github_token).get_repo(GITHUB_REPO)
+        
+        # Determine which files to sync
+        files_to_sync = []
+        if file_pattern == 'inbox':
+            files_to_sync = ['inbox_tasks.json']
+        else:  # 'all'
+            files_to_sync = [f for f in os.listdir('tasks') if f.endswith('.json')]
+        
+        for filename in files_to_sync:
+            try:
+                # Read local task file
+                file_path = os.path.join('tasks', filename)
+                with open(file_path, 'r') as f:
+                    local_tasks = json.load(f)
+                
+                try:
+                    # Try to get existing file
+                    file_content = repo.get_contents(f"tasks/{filename}")
+                    repo.update_file(
+                        f"tasks/{filename}",
+                        f"Update {filename} from local system",
+                        json.dumps(local_tasks, indent=2),
+                        file_content.sha
+                    )
+                except Exception:
+                    # File doesn't exist, create it
+                    repo.create_file(
+                        f"tasks/{filename}",
+                        f"Initial upload of {filename}",
+                        json.dumps(local_tasks, indent=2)
+                    )
+                
+                logger.info(f"Successfully synced {filename} to GitHub")
+                
+            except Exception as e:
+                logger.error(f"Failed to sync {filename} to GitHub: {e}")
+                continue
+                
+    except Exception as e:
+        logger.error(f"Failed to initialize GitHub sync: {e}")
+
 if __name__ == "__main__":
     try:
         print("Initializing ProjectM system...")
         ensure_directories()
+        
+        # Initialize the system once at startup
         system = initialize_system()
+        print("System initialized successfully")
         
-        # Example query processing
-        test_query = "What are the current high priority tasks?"
-        print(f"\nProcessing query: {test_query}")
-        suggestion = system.process_query(test_query)
-        print(f"\nSuggestion: {suggestion}")
-        
-        # Run feedback update
-        print("\nUpdating feedback data...")
-        system.update_feedback()
-        
-        # Run task sync
-        print("\nSyncing tasks...")
-        hourly_task_sync(system.task_analyzer)
-        
-        # Run pattern analysis
-        print("\nAnalyzing patterns...")
-        daily_pattern_analysis(
-            system.task_analyzer,
-            system.temporal_analyzer,
-            system.feedback_repo
-        )
-        
-        print("\nSystem execution completed successfully!")
-        
+        print("Starting ProjectM server...")
+        # Run the Flask app with debug mode and allow all hosts
+        app.run(debug=True, host='0.0.0.0', port=5001)
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         sys.exit(1)

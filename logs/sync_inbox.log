@@ -1,0 +1,21 @@
+zsh: no such file or directory: /Users/csainsbury/Documents/projectM/sync_inbox.sh
+/Users/csainsbury/Documents/projectM/projectM/sync_inbox.sh: line 3: activate: No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'projectM'
+/Users/csainsbury/Documents/projectM/sync_inbox.sh: line 3: activate: No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'projectM'
+/Users/csainsbury/Documents/projectM/sync_inbox.sh: line 3: activate: No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'projectM'
+/Users/csainsbury/Documents/projectM/sync_inbox.sh: line 3: activate: No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'projectM'
+/Users/csainsbury/Documents/projectM/sync_inbox.sh: line 3: activate: No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'projectM'

@@ -285,28 +285,5 @@
         "url": "https://app.todoist.com/app/task/8708284154",
         "duration": null,
         "deadline": null
-    },
-    {
-        "id": "8708764310",
-        "assigner_id": null,
-        "assignee_id": null,
-        "project_id": "1221911463",
-        "section_id": null,
-        "parent_id": null,
-        "order": 98,
-        "content": "new test event",
-        "description": "",
-        "is_completed": false,
-        "labels": [
-            "chronoCIGHT"
-        ],
-        "priority": 1,
-        "comment_count": 0,
-        "creator_id": "5017456",
-        "created_at": "2024-12-24T16:52:46.906406Z",
-        "due": null,
-        "url": "https://app.todoist.com/app/task/8708764310",
-        "duration": null,
-        "deadline": null
     }
 ]
