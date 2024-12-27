@@ -405,6 +405,27 @@ class FeedbackRepository:
             else:
                 print(f"Error checking {path}: {e}")
 
+    def update_file(self, path: str, message: str, content: str):
+        """Update a file in the repository"""
+        try:
+            # Ensure file exists first
+            self.ensure_file_exists(path, content)
+            
+            # Get current content to get the SHA
+            file_content = self.repo.get_contents(path)
+            
+            # Update the file
+            self.repo.update_file(
+                path=path,
+                message=message,
+                content=content,
+                sha=file_content.sha
+            )
+            print(f"Successfully updated {path}")
+        except Exception as e:
+            print(f"Error updating file {path}: {e}")
+            raise
+
     def update_outcomes(self, feedback_data):
         """Update feedback data in GitHub repo"""
         try:
@@ -821,14 +842,25 @@ def hourly_task_sync(task_analyzer: TaskAnalysisService):
     Sync tasks and run feedback updates
     """
     try:
-        # Get current tasks from GitHub
-        github_monitor = GitHubActivityMonitor(GITHUB_TOKEN, GITHUB_REPO)
+        # Create resource manager first
+        resource_manager = GitHubResourceManager(GITHUB_TOKEN, GITHUB_REPO)
+        
+        # Create GitHub monitor with resource manager
+        github_monitor = GitHubActivityMonitor(resource_manager)
         current_tasks = github_monitor.get_tasks().get("tasks", [])
         
         # Load previous tasks from feedback repository
         feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
-        previous_tasks_content = feedback_repo.repo.get_contents(f"{FEEDBACK_DIR}/previous_tasks.json")
-        previous_tasks = json.loads(previous_tasks_content.decoded_content.decode()) if previous_tasks_content else []
+        
+        # Ensure previous_tasks.json exists
+        feedback_repo.ensure_file_exists(f"{FEEDBACK_DIR}/previous_tasks.json", "[]")
+        
+        try:
+            previous_tasks_content = feedback_repo.repo.get_contents(f"{FEEDBACK_DIR}/previous_tasks.json")
+            previous_tasks = json.loads(previous_tasks_content.decoded_content.decode())
+        except Exception as e:
+            logger.warning(f"Could not load previous tasks, using empty list: {e}")
+            previous_tasks = []
         
         # Analyze changes
         changes = task_analyzer.monitor_task_changes(previous_tasks, current_tasks)
@@ -860,8 +892,11 @@ def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
     Perform daily analysis of patterns
     """
     try:
-        # Get all tasks
-        github_monitor = GitHubActivityMonitor(GITHUB_TOKEN, GITHUB_REPO)
+        # Create resource manager first
+        resource_manager = GitHubResourceManager(GITHUB_TOKEN, GITHUB_REPO)
+        
+        # Create GitHub monitor with resource manager
+        github_monitor = GitHubActivityMonitor(resource_manager)
         task_history = github_monitor.get_tasks().get("tasks", [])
         
         # Analyze patterns
