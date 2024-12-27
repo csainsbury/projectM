@@ -30,10 +30,20 @@ import jsonlines
 import os
 import time
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from github import Github
 from github.Repository import Repository
 from dotenv import load_dotenv
+from functools import lru_cache
+from typing import Optional, Dict, List
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -63,168 +73,127 @@ FEEDBACK_DIR = "feedback"
 
 
 # ---------------------------------------------------------------------------
-# CLASS: TaskAnalysisService
+# Cache and State Management
 # ---------------------------------------------------------------------------
-class TaskAnalysisService:
-    """
-    Compares previous tasks to current tasks to identify completed, modified, or
-    newly created tasks. Also can analyze how completion might affect downstream tasks.
-    """
+class StateManager:
+    """Manages application state and caching"""
+    def __init__(self):
+        self._cache = {}
+        self._last_update = {}
+        self._rate_limit_remaining = None
+        self._rate_limit_reset = None
 
-    def monitor_task_changes(self, previous_tasks, current_tasks):
-        """Compare task lists to identify completed and modified tasks."""
-        previous_ids = {task['id'] for task in previous_tasks}
-        current_ids = {task['id'] for task in current_tasks}
+    def get_cache(self, key: str) -> Optional[dict]:
+        """Get cached data if it exists and is not expired"""
+        if key in self._cache and key in self._last_update:
+            # Check if cache is still valid (1 hour for most data)
+            if datetime.now() - self._last_update[key] < timedelta(hours=1):
+                return self._cache[key]
+        return None
 
-        completed = previous_ids - current_ids
-        modified = []
-        downstream = []
+    def set_cache(self, key: str, data: dict):
+        """Set cache data with current timestamp"""
+        self._cache[key] = data
+        self._last_update[key] = datetime.now()
 
-        # Replace placeholder logic with actual dependency checking
-        for ctask in current_tasks:
-            # Check for modified tasks
-            for ptask in previous_tasks:
-                if (ctask['id'] == ptask['id'] and 
-                    (ctask.get('description') != ptask.get('description') or
-                     ctask.get('status') != ptask.get('status') or
-                     ctask.get('priority') != ptask.get('priority'))):
-                    modified.append(ctask['id'])
-            
-            # Check for downstream dependencies
-            if 'depends_on' in ctask:
-                if any(dep_id in completed for dep_id in ctask['depends_on']):
-                    downstream.append(ctask['id'])
+    def clear_cache(self, key: str = None):
+        """Clear specific or all cache entries"""
+        if key:
+            self._cache.pop(key, None)
+            self._last_update.pop(key, None)
+        else:
+            self._cache.clear()
+            self._last_update.clear()
 
-        return {
-            'completed': list(completed),
-            'modified': modified,
-            'downstream': downstream
-        }
+    def update_rate_limits(self, remaining: int, reset_time: datetime):
+        """Update GitHub rate limit information"""
+        self._rate_limit_remaining = remaining
+        self._rate_limit_reset = reset_time
 
-    def analyze_completion_patterns(self, task_history):
-        """Analyze patterns in task completion"""
-        if not task_history:
-            return {
-                'avg_completion_time_hours': None,
-                'success_rate': 0,
-                'completion_by_priority': {},
-                'completion_by_type': {},
-                'avg_dependencies': 0
-            }
+    def can_make_request(self) -> bool:
+        """Check if we can make a GitHub request"""
+        if self._rate_limit_remaining is None:
+            return True
+        if self._rate_limit_remaining <= 0:
+            if datetime.now() < self._rate_limit_reset:
+                return False
+        return True
 
-        completed_tasks = [t for t in task_history if t.get('completed_at')]
-        total_tasks = len(task_history)
-        
-        # Calculate metrics
-        completion_times = []
-        priorities = {}
-        types = {}
-        dependency_counts = []
-
-        for task in completed_tasks:
-            # Completion time
-            if isinstance(task.get('created_at'), (int, float)) and isinstance(task.get('completed_at'), (int, float)):
-                completion_time = (task['completed_at'] - task['created_at']) / 3600.0  # Convert to hours
-                completion_times.append(completion_time)
-
-            # Priority statistics
-            priority = task.get('priority', 'unknown')
-            priorities[priority] = priorities.get(priority, 0) + 1
-
-            # Type statistics
-            task_type = task.get('type', 'unknown')
-            types[task_type] = types.get(task_type, 0) + 1
-
-            # Dependency statistics
-            deps = len(task.get('depends_on', []))
-            dependency_counts.append(deps)
-
-        return {
-            'avg_completion_time_hours': sum(completion_times) / len(completion_times) if completion_times else None,
-            'success_rate': len(completed_tasks) / total_tasks if total_tasks > 0 else 0,
-            'completion_by_priority': priorities,
-            'completion_by_type': types,
-            'avg_dependencies': sum(dependency_counts) / len(dependency_counts) if dependency_counts else 0
-        }
-
+# Create global state manager
+state_manager = StateManager()
 
 # ---------------------------------------------------------------------------
-# CLASS: GitHubActivityMonitor
+# Resource Management
 # ---------------------------------------------------------------------------
-class GitHubActivityMonitor:
-    """
-    A stub for monitoring GitHub commits, PRs, or issues related to specific tasks.
-    """
-
+class GitHubResourceManager:
+    """Manages GitHub API resources and rate limits"""
     def __init__(self, github_token: str, repo_name: str):
         self.github = Github(github_token)
         self.repo = self.github.get_repo(repo_name)
+        self._update_rate_limits()
 
+    def _update_rate_limits(self):
+        """Update rate limit information"""
+        rate_limit = self.github.get_rate_limit()
+        state_manager.update_rate_limits(
+            rate_limit.core.remaining,
+            rate_limit.core.reset
+        )
+
+    @lru_cache(maxsize=128)
     def get_repository_contents(self, path: str = "") -> dict:
-        """
-        Recursively get contents of repository or specific path
-        Returns a dictionary with both file structure and contents
-        """
-        contents = {
-            "structure": {},
-            "file_contents": {}
-        }
+        """Cached repository contents retrieval"""
+        if not state_manager.can_make_request():
+            raise Exception("GitHub API rate limit exceeded")
+        
         try:
-            for content in self.repo.get_contents(path):
-                if content.type == "dir":
-                    # Recursively get contents of subdirectories
-                    sub_contents = self.get_repository_contents(content.path)
-                    contents["structure"][content.name] = sub_contents["structure"]
-                    contents["file_contents"].update(sub_contents["file_contents"])
-                else:
-                    # Store both the file info and its contents
-                    if content.name.endswith(('.txt', '.json')):
-                        try:
-                            file_content = content.decoded_content.decode()
-                            contents["structure"][content.name] = "file"
-                            contents["file_contents"][content.path] = {
-                                "content": file_content,
-                                "type": content.name.split('.')[-1]
-                            }
-                            print(f"Successfully loaded: {content.path}")
-                        except Exception as e:
-                            print(f"Error loading {content.path}: {e}")
+            contents = self.repo.get_contents(path)
+            self._update_rate_limits()
+            return contents
         except Exception as e:
-            print(f"Error accessing {path}: {e}")
-        return contents
+            logger.error(f"Error accessing repository contents: {e}")
+            raise
+
+# ---------------------------------------------------------------------------
+# Updated GitHubActivityMonitor
+# ---------------------------------------------------------------------------
+class GitHubActivityMonitor:
+    """Monitors GitHub activity with proper caching and resource management"""
+    def __init__(self, resource_manager: GitHubResourceManager):
+        self.resource_manager = resource_manager
 
     def get_tasks(self) -> dict:
-        """
-        Get task files from repository
-        Returns both the tasks and their raw content
-        """
-        tasks_content = {
-            "tasks": [],
-            "raw_contents": {}
-        }
+        """Get tasks with caching"""
+        cached_tasks = state_manager.get_cache('tasks')
+        if cached_tasks:
+            return cached_tasks
+
         try:
-            repo_contents = self.get_repository_contents(TASKS_PATH)
+            tasks_content = {
+                "tasks": [],
+                "raw_contents": {}
+            }
             
-            # Process all JSON and text files found
-            for file_path, file_info in repo_contents["file_contents"].items():
-                print(f"Processing file: {file_path}")
-                
-                if file_info["type"] == "json":
-                    try:
-                        content = json.loads(file_info["content"])
-                        if isinstance(content, dict) and "tasks" in content:
-                            tasks_content["tasks"].extend(content["tasks"])
-                        tasks_content["raw_contents"][file_path] = content
-                    except json.JSONDecodeError as e:
-                        print(f"Error parsing JSON from {file_path}: {e}")
-                else:  # txt files
-                    tasks_content["raw_contents"][file_path] = file_info["content"]
-                    
-            print(f"Found {len(tasks_content['tasks'])} tasks across {len(tasks_content['raw_contents'])} files")
-            
+            contents = self.resource_manager.get_repository_contents(TASKS_PATH)
+            for content in contents:
+                if content.name.endswith(('.json', '.txt')):
+                    file_content = content.decoded_content.decode()
+                    if content.name.endswith('.json'):
+                        try:
+                            parsed = json.loads(file_content)
+                            if isinstance(parsed, dict) and "tasks" in parsed:
+                                tasks_content["tasks"].extend(parsed["tasks"])
+                            tasks_content["raw_contents"][content.path] = parsed
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Error parsing JSON from {content.path}: {e}")
+                    else:
+                        tasks_content["raw_contents"][content.path] = file_content
+
+            state_manager.set_cache('tasks', tasks_content)
+            return tasks_content
         except Exception as e:
-            print(f"Error getting tasks: {e}")
-        return tasks_content
+            logger.error(f"Error getting tasks: {e}")
+            raise
 
     def track_related_activity(self, task_id, timeframe):
         """
@@ -509,86 +478,66 @@ class FeedbackRepository:
 # CLASS: ContextAggregator
 # ---------------------------------------------------------------------------
 class ContextAggregator:
-    """
-    Aggregates all relevant feedback data with the user query and repository info to
-    produce a final context for the LLM.
-    """
-
-    def aggregate_context(self, query, repo_contents):
-        """
-        Collect relevant feedback data and combine it with user query + repo info
-        """
-        print("\n=== Files and Content Being Aggregated ===")
-        print("Repository Contents Structure:")
+    def __init__(self, github_monitor: GitHubActivityMonitor):
+        self.github_monitor = github_monitor
         
-        # Pretty print the structure
-        if isinstance(repo_contents, dict):
-            for key, value in repo_contents.items():
-                if key == "raw_contents":
-                    print("\nRaw Contents Files:")
-                    for file_path in value.keys():
-                        print(f"- {file_path}")
-                elif key == "tasks":
-                    print(f"\nTasks Found: {len(value)}")
-                else:
-                    print(f"- {key}")
-
-        context = {
-            "user_query": query,
-            "repo_info": repo_contents,
-        }
-        
-        print("\n=== Final Aggregated Context ===")
-        print(json.dumps(context, indent=2))
-        return context
-
     def get_feedback_context(self):
-        """
-        Load outcomes, patterns, temporal data and tasks from the repo
-        """
-        print("\n=== Loading Repository Contents ===")
-        
-        github_monitor = GitHubActivityMonitor(GITHUB_TOKEN, GITHUB_REPO)
-        tasks_content = github_monitor.get_tasks()
-        
-        print("\n=== Loading Feedback Files ===")
-        
-        # Load existing feedback data
-        outcomes = []
-        if os.path.exists(ACTION_OUTCOMES_FILE):
-            print(f"Loading: {ACTION_OUTCOMES_FILE}")
-            with jsonlines.open(ACTION_OUTCOMES_FILE, mode='r') as reader:
-                outcomes = list(reader)
-        else:
-            print(f"File not found: {ACTION_OUTCOMES_FILE}")
+        """Get feedback context with caching"""
+        cached_context = state_manager.get_cache('feedback_context')
+        if cached_context:
+            return cached_context
 
-        success_patterns = {}
-        if os.path.exists(SUCCESS_PATTERNS_FILE):
-            print(f"Loading: {SUCCESS_PATTERNS_FILE}")
-            with open(SUCCESS_PATTERNS_FILE, 'r', encoding='utf-8') as f:
-                success_patterns = json.load(f)
-        else:
-            print(f"File not found: {SUCCESS_PATTERNS_FILE}")
+        try:
+            tasks_content = self.github_monitor.get_tasks()
+            feedback_context = {
+                "tasks_content": tasks_content,
+                "action_outcomes": self._load_outcomes(),
+                "success_patterns": self._load_patterns(),
+                "temporal_analysis": self._load_temporal()
+            }
+            
+            state_manager.set_cache('feedback_context', feedback_context)
+            return feedback_context
+        except Exception as e:
+            logger.error(f"Error getting feedback context: {e}")
+            raise
 
-        temporal_analysis = {}
-        if os.path.exists(TEMPORAL_ANALYSIS_FILE):
-            print(f"Loading: {TEMPORAL_ANALYSIS_FILE}")
-            with open(TEMPORAL_ANALYSIS_FILE, 'r', encoding='utf-8') as f:
-                temporal_analysis = json.load(f)
-        else:
-            print(f"File not found: {TEMPORAL_ANALYSIS_FILE}")
+    def _load_outcomes(self):
+        """Load outcomes with error handling"""
+        try:
+            return self._load_json_file(ACTION_OUTCOMES_FILE)
+        except Exception as e:
+            logger.error(f"Error loading outcomes: {e}")
+            return []
 
-        # Combine all context
-        feedback_context = {
-            "tasks_content": tasks_content,
-            "action_outcomes": outcomes,
-            "success_patterns": success_patterns,
-            "temporal_analysis": temporal_analysis
-        }
-        
-        print("\n=== Feedback Context Summary ===")
-        print(json.dumps(feedback_context, indent=2))
-        return feedback_context
+    def _load_patterns(self):
+        """Load patterns with error handling"""
+        try:
+            return self._load_json_file(SUCCESS_PATTERNS_FILE)
+        except Exception as e:
+            logger.error(f"Error loading patterns: {e}")
+            return {}
+
+    def _load_temporal(self):
+        """Load temporal analysis with error handling"""
+        try:
+            return self._load_json_file(TEMPORAL_ANALYSIS_FILE)
+        except Exception as e:
+            logger.error(f"Error loading temporal analysis: {e}")
+            return {}
+
+    @staticmethod
+    def _load_json_file(filepath):
+        """Load JSON file with proper error handling"""
+        try:
+            with open(filepath, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logger.warning(f"File not found: {filepath}")
+            return {} if filepath.endswith('.json') else []
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing JSON from {filepath}: {e}")
+            return {} if filepath.endswith('.json') else []
 
 
 # ---------------------------------------------------------------------------
@@ -823,47 +772,38 @@ def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
 
 
 # ---------------------------------------------------------------------------
+# Main initialization
+# ---------------------------------------------------------------------------
+def initialize_system():
+    """Initialize system with proper resource management"""
+    try:
+        resource_manager = GitHubResourceManager(GITHUB_TOKEN, GITHUB_REPO)
+        github_monitor = GitHubActivityMonitor(resource_manager)
+        context_aggregator = ContextAggregator(github_monitor)
+        
+        # Initialize other components...
+        
+        return ActionSuggestionSystem(
+            llm_service=LLMService(),
+            context_aggregator=context_aggregator,
+            feedback_repo=FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO),
+            feedback_collector=FeedbackCollector(github_monitor, UserInteractionTracker(), TemporalAnalysis()),
+            task_analyzer=TaskAnalysisService(),
+            user_tracker=UserInteractionTracker(),
+            temporal_analyzer=TemporalAnalysis()
+        )
+    except Exception as e:
+        logger.error(f"Error initializing system: {e}")
+        raise
+
+
+# ---------------------------------------------------------------------------
 # Main executable (example usage)
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Get API key from environment
-    gemini_api_key = os.getenv('GOOGLE_API_KEY')
-    if not gemini_api_key:
-        raise ValueError("GOOGLE_API_KEY environment variable is not set")
-
-    # Instantiate all components
-    github_monitor = GitHubActivityMonitor(GITHUB_TOKEN, GITHUB_REPO)
-    user_tracker = UserInteractionTracker()
-    temporal_analyzer = TemporalAnalysis()
-    feedback_collector = FeedbackCollector(github_monitor, user_tracker, temporal_analyzer)
-    feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
-    context_aggregator = ContextAggregator()
-    llm_service = LLMService(api_key=gemini_api_key)  # Use environment variable instead of placeholder
-
-    task_analyzer = TaskAnalysisService()
-
-    action_suggestion_system = ActionSuggestionSystem(
-        llm_service=llm_service,
-        context_aggregator=context_aggregator,
-        feedback_repo=feedback_repo,
-        feedback_collector=feedback_collector,
-        task_analyzer=task_analyzer,
-        user_tracker=user_tracker,
-        temporal_analyzer=temporal_analyzer
-    )
-
-    # Example: Hourly task sync
-    hourly_task_sync(task_analyzer)
-
-    # Example: Daily pattern analysis
-    daily_pattern_analysis(task_analyzer, temporal_analyzer, feedback_repo)
-
-    # Example: Process user query
-    user_query = "What tasks should I focus on next for Project X?"
-    suggestion = action_suggestion_system.process_query(user_query)
-    print("[INFO] LLM Suggestion:", suggestion)
-
-    # Example: Periodic feedback update
-    action_suggestion_system.update_feedback()
-
-    print("[INFO] Script execution complete.")
+    try:
+        system = initialize_system()
+        # Your main execution code here...
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        sys.exit(1)
