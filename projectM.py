@@ -37,6 +37,7 @@ from dotenv import load_dotenv
 from functools import lru_cache
 from typing import Optional, Dict, List
 import logging
+import sys
 
 # Configure logging
 logging.basicConfig(
@@ -481,6 +482,36 @@ class ContextAggregator:
     def __init__(self, github_monitor: GitHubActivityMonitor):
         self.github_monitor = github_monitor
         
+    def aggregate_context(self, query: str, repo_contents: dict) -> dict:
+        """
+        Aggregate context from various sources for the LLM
+        
+        :param query: The user's query
+        :param repo_contents: Repository contents and feedback data
+        :return: Aggregated context dictionary
+        """
+        try:
+            # Extract tasks and other relevant data
+            tasks = repo_contents.get("tasks_content", {}).get("tasks", [])
+            
+            # Build context dictionary
+            context = {
+                "user_query": query,
+                "repo_info": {
+                    "tasks": tasks,
+                    "action_outcomes": repo_contents.get("action_outcomes", []),
+                    "success_patterns": repo_contents.get("success_patterns", {}),
+                    "temporal_analysis": repo_contents.get("temporal_analysis", {})
+                }
+            }
+            
+            logger.info(f"Successfully aggregated context for query: {query}")
+            return context
+            
+        except Exception as e:
+            logger.error(f"Error aggregating context: {e}")
+            raise
+
     def get_feedback_context(self):
         """Get feedback context with caching"""
         cached_context = state_manager.get_cache('feedback_context')
@@ -616,6 +647,88 @@ Please analyze the above context and suggest next best actions.
             text_suggestion = f"Unexpected error: {str(e)}"
 
         return text_suggestion
+
+
+# ---------------------------------------------------------------------------
+# CLASS: TaskAnalysisService
+# ---------------------------------------------------------------------------
+class TaskAnalysisService:
+    """Analyzes task completion patterns and dependencies"""
+    
+    def monitor_task_changes(self, previous_tasks: List[dict], current_tasks: List[dict]) -> dict:
+        """Compare task lists to identify completed and modified tasks."""
+        previous_ids = {task['id'] for task in previous_tasks}
+        current_ids = {task['id'] for task in current_tasks}
+
+        completed = previous_ids - current_ids
+        modified = []
+        downstream = []
+
+        for ctask in current_tasks:
+            # Check for modified tasks
+            for ptask in previous_tasks:
+                if (ctask['id'] == ptask['id'] and 
+                    (ctask.get('description') != ptask.get('description') or
+                     ctask.get('status') != ptask.get('status') or
+                     ctask.get('priority') != ptask.get('priority'))):
+                    modified.append(ctask['id'])
+            
+            # Check for downstream dependencies
+            if 'depends_on' in ctask:
+                if any(dep_id in completed for dep_id in ctask['depends_on']):
+                    downstream.append(ctask['id'])
+
+        return {
+            'completed': list(completed),
+            'modified': modified,
+            'downstream': downstream
+        }
+
+    def analyze_completion_patterns(self, task_history: List[dict]) -> dict:
+        """Analyze patterns in task completion"""
+        if not task_history:
+            return {
+                'avg_completion_time_hours': None,
+                'success_rate': 0,
+                'completion_by_priority': {},
+                'completion_by_type': {},
+                'avg_dependencies': 0
+            }
+
+        completed_tasks = [t for t in task_history if t.get('completed_at')]
+        total_tasks = len(task_history)
+        
+        # Calculate metrics
+        completion_times = []
+        priorities = {}
+        types = {}
+        dependency_counts = []
+
+        for task in completed_tasks:
+            # Completion time
+            if isinstance(task.get('created_at'), (int, float)) and isinstance(task.get('completed_at'), (int, float)):
+                completion_time = (task['completed_at'] - task['created_at']) / 3600.0  # Convert to hours
+                completion_times.append(completion_time)
+
+            # Priority statistics
+            priority = task.get('priority', 'unknown')
+            priorities[priority] = priorities.get(priority, 0) + 1
+
+            # Type statistics
+            task_type = task.get('type', 'unknown')
+            types[task_type] = types.get(task_type, 0) + 1
+
+            # Dependency statistics
+            deps = len(task.get('depends_on', []))
+            dependency_counts.append(deps)
+
+        return {
+            'avg_completion_time_hours': sum(completion_times) / len(completion_times) if completion_times else None,
+            'success_rate': len(completed_tasks) / total_tasks if total_tasks > 0 else 0,
+            'completion_by_priority': priorities,
+            'completion_by_type': types,
+            'avg_dependencies': sum(dependency_counts) / len(dependency_counts) if dependency_counts else 0
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -772,88 +885,6 @@ def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
 
 
 # ---------------------------------------------------------------------------
-# CLASS: TaskAnalysisService
-# ---------------------------------------------------------------------------
-class TaskAnalysisService:
-    """Analyzes task completion patterns and dependencies"""
-    
-    def monitor_task_changes(self, previous_tasks: List[dict], current_tasks: List[dict]) -> dict:
-        """Compare task lists to identify completed and modified tasks."""
-        previous_ids = {task['id'] for task in previous_tasks}
-        current_ids = {task['id'] for task in current_tasks}
-
-        completed = previous_ids - current_ids
-        modified = []
-        downstream = []
-
-        for ctask in current_tasks:
-            # Check for modified tasks
-            for ptask in previous_tasks:
-                if (ctask['id'] == ptask['id'] and 
-                    (ctask.get('description') != ptask.get('description') or
-                     ctask.get('status') != ptask.get('status') or
-                     ctask.get('priority') != ptask.get('priority'))):
-                    modified.append(ctask['id'])
-            
-            # Check for downstream dependencies
-            if 'depends_on' in ctask:
-                if any(dep_id in completed for dep_id in ctask['depends_on']):
-                    downstream.append(ctask['id'])
-
-        return {
-            'completed': list(completed),
-            'modified': modified,
-            'downstream': downstream
-        }
-
-    def analyze_completion_patterns(self, task_history: List[dict]) -> dict:
-        """Analyze patterns in task completion"""
-        if not task_history:
-            return {
-                'avg_completion_time_hours': None,
-                'success_rate': 0,
-                'completion_by_priority': {},
-                'completion_by_type': {},
-                'avg_dependencies': 0
-            }
-
-        completed_tasks = [t for t in task_history if t.get('completed_at')]
-        total_tasks = len(task_history)
-        
-        # Calculate metrics
-        completion_times = []
-        priorities = {}
-        types = {}
-        dependency_counts = []
-
-        for task in completed_tasks:
-            # Completion time
-            if isinstance(task.get('created_at'), (int, float)) and isinstance(task.get('completed_at'), (int, float)):
-                completion_time = (task['completed_at'] - task['created_at']) / 3600.0  # Convert to hours
-                completion_times.append(completion_time)
-
-            # Priority statistics
-            priority = task.get('priority', 'unknown')
-            priorities[priority] = priorities.get(priority, 0) + 1
-
-            # Type statistics
-            task_type = task.get('type', 'unknown')
-            types[task_type] = types.get(task_type, 0) + 1
-
-            # Dependency statistics
-            deps = len(task.get('depends_on', []))
-            dependency_counts.append(deps)
-
-        return {
-            'avg_completion_time_hours': sum(completion_times) / len(completion_times) if completion_times else None,
-            'success_rate': len(completed_tasks) / total_tasks if total_tasks > 0 else 0,
-            'completion_by_priority': priorities,
-            'completion_by_type': types,
-            'avg_dependencies': sum(dependency_counts) / len(dependency_counts) if dependency_counts else 0
-        }
-
-
-# ---------------------------------------------------------------------------
 # Main initialization
 # ---------------------------------------------------------------------------
 def initialize_system():
@@ -879,13 +910,64 @@ def initialize_system():
         raise
 
 
+def ensure_directories():
+    """Ensure all required directories and files exist"""
+    try:
+        # Create data directory if it doesn't exist
+        os.makedirs('data', exist_ok=True)
+        
+        # Initialize empty files if they don't exist
+        default_files = {
+            'data/action_outcomes.jsonl': '',
+            'data/success_patterns.json': '{}',
+            'data/temporal_analysis.json': '{}'
+        }
+        
+        for filepath, default_content in default_files.items():
+            if not os.path.exists(filepath):
+                with open(filepath, 'w') as f:
+                    f.write(default_content)
+                logger.info(f"Created file: {filepath}")
+                
+        logger.info("Directory structure initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing directories: {e}")
+        raise
+
+
 # ---------------------------------------------------------------------------
-# Main executable (example usage)
+# Main execution
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     try:
+        print("Initializing ProjectM system...")
+        ensure_directories()
         system = initialize_system()
-        # Your main execution code here...
+        
+        # Example query processing
+        test_query = "What are the current high priority tasks?"
+        print(f"\nProcessing query: {test_query}")
+        suggestion = system.process_query(test_query)
+        print(f"\nSuggestion: {suggestion}")
+        
+        # Run feedback update
+        print("\nUpdating feedback data...")
+        system.update_feedback()
+        
+        # Run task sync
+        print("\nSyncing tasks...")
+        hourly_task_sync(system.task_analyzer)
+        
+        # Run pattern analysis
+        print("\nAnalyzing patterns...")
+        daily_pattern_analysis(
+            system.task_analyzer,
+            system.temporal_analyzer,
+            system.feedback_repo
+        )
+        
+        print("\nSystem execution completed successfully!")
+        
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         sys.exit(1)
