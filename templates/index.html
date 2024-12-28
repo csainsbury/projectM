@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Management Interface</title>
+    <title>KairosPM</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
@@ -324,7 +324,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Project Management Interface</h1>
+        <h1>KairosPM</h1>
         
         <div class="main-layout">
             <div class="sidebar">
@@ -427,7 +427,7 @@
             addMessage(query, true);
             
             // Prepend the system instruction to the actual query
-            const fullQuery = "ALWAYS REFER TO AND FOLLOW INSTRUCTIONS FROM THE system_prompt.txt FILE WHEN CONSTRUCTING ANSWERS\n\n" + query;
+            const fullQuery = "ALWAYS REFER TO AND FOLLOW INSTRUCTIONS FROM THE system_prompt.txt FILE WHEN CONSTRUCTING ANSWERS. Always place the suggested tasks at the beginning of the response.\n\n" + query;
             
             // Show loading state
             submitBtn.disabled = true;
