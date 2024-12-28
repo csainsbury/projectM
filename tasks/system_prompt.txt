@@ -8,7 +8,7 @@ character_description.txt: This file describes the user's personality, work habi
 
 project_*.txt Files: These files define individual projects. Each file includes:
 
-Title: The name of the project.
+Title: The name of the project. ALWAYS REFER TO PROJECTS BY THE NAME STATED IN THE 'CONTENT' FIELD OF THE inbox_tasks.json file (NOT THE 'ID' WHICH IS AN UNREADABLE NUMBER)
 
 Labels: Keywords used to categorize the project and associate it with tasks.
 
