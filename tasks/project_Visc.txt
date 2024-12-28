@@ -1,0 +1,21 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+Visc - visualisation of counterfactuals
+</title>
+
+<associated_label>
+@visc
+</associated_label>
+
+<context>
+mrc_gan_paper.txt - this document outlines the progress made in the development of GAN-driven virtual trial emulation
+</context>
+
+<current_status>
+GAN based virtual trial emulation functioning to a reasonable degree
+awaiting access back to the development environment within the safe haven
+</current_status>

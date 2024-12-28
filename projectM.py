@@ -1327,55 +1327,31 @@ class TaskAnalysisService:
     def analyze_completion_patterns(self, task_history: List[dict]) -> dict:
         """Analyze patterns in task completion"""
         try:
-            # Load both current and historical tasks
+            # Load completed tasks from feedback file
             completed_tasks = []
+            completed_path = os.path.join('feedback', 'completed_tasks.jsonl')
             
-            # Check inbox_tasks.json history from GitHub
-            try:
-                repo = Github(os.getenv('GITHUB_TOKEN')).get_repo(GITHUB_REPO)
-                commits = repo.get_commits(path='tasks/inbox_tasks.json')
-                
-                for commit in commits:
-                    file_content = repo.get_contents('tasks/inbox_tasks.json', ref=commit.sha)
-                    historical_tasks = json.loads(file_content.decoded_content.decode())
-                    
-                    # Track tasks that were in previous versions but not current
-                    if isinstance(historical_tasks, dict) and 'tasks' in historical_tasks:
-                        completed_tasks.extend([
-                            task for task in historical_tasks['tasks']
-                            if task.get('completed_at')
-                        ])
-            except Exception as e:
-                logger.error(f"Error loading task history: {e}")
-
-            # Add currently completed tasks
-            current_completed = [task for task in task_history if task.get('completed_at')]
-            completed_tasks.extend(current_completed)
-
-            # Remove duplicates based on task ID
-            seen_ids = set()
-            unique_completed = []
-            for task in completed_tasks:
-                if task.get('id') not in seen_ids:
-                    seen_ids.add(task.get('id'))
-                    unique_completed.append(task)
-
-            total_tasks = len(task_history)
-            completion_count = len(unique_completed)
+            if os.path.exists(completed_path):
+                with jsonlines.open(completed_path) as reader:
+                    completed_tasks = list(reader)
+            
+            # Calculate metrics
+            total_tasks = len(task_history) + len(completed_tasks)
+            completion_count = len(completed_tasks)
             
             analysis = {
                 "completion_rate": completion_count / total_tasks if total_tasks > 0 else 0,
                 "completed_count": completion_count,
                 "total_count": total_tasks,
-                "avg_completion_time": self._calculate_avg_completion_time(unique_completed),
-                "completion_by_priority": self._analyze_priority_patterns(unique_completed),
-                "completion_by_type": self._analyze_type_patterns(unique_completed),
-                "dependency_impact": self._analyze_dependencies(unique_completed, task_history)
+                "avg_completion_time": self._calculate_avg_completion_time(completed_tasks),
+                "completion_by_priority": self._analyze_priority_patterns(completed_tasks),
+                "completion_by_type": self._analyze_type_patterns(completed_tasks),
+                "dependency_impact": self._analyze_dependencies(completed_tasks, task_history)
             }
 
-            logger.info(f"Analyzed {len(unique_completed)} completed tasks out of {total_tasks} total tasks")
+            logger.info(f"Analyzed {completion_count} completed tasks out of {total_tasks} total tasks")
             return analysis
-
+            
         except Exception as e:
             logger.error(f"Error analyzing completion patterns: {e}")
             return {
