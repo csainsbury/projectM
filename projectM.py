@@ -262,22 +262,13 @@ class GitHubActivityMonitor:
 # CLASS: UserInteractionTracker
 # ---------------------------------------------------------------------------
 class UserInteractionTracker:
-    """
-    Tracks how users interact with suggestions (did they accept, modify, reject them, etc.)
-    """
-
+    """Tracks and analyzes user interactions with tasks and suggestions"""
+    
     def __init__(self):
         self.interactions_log = []
 
     def track_interactions(self, suggestion_id, action="viewed", metadata=None):
-        """
-        Track user interactions with suggestions
-        
-        :param suggestion_id: The ID of the suggestion
-        :param action: One of ['viewed', 'accepted', 'modified', 'rejected']
-        :param metadata: Optional dict with additional interaction data
-        :return: dict of the tracked interaction
-        """
+        """Track basic interaction events"""
         interaction_event = {
             "suggestion_id": suggestion_id,
             "timestamp": time.time(),
@@ -285,123 +276,696 @@ class UserInteractionTracker:
             "metadata": metadata or {}
         }
         self.interactions_log.append(interaction_event)
-        
-        # Store interaction in feedback repository
-        try:
-            feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
-            feedback_repo.update_outcomes(interaction_event)
-            print(f"[INFO] Stored interaction for suggestion {suggestion_id}")
-        except Exception as e:
-            print(f"[ERROR] Failed to store interaction: {e}")
-            
         return interaction_event
+
+    def analyze_interaction_patterns(self, interaction_history: List[dict]) -> dict:
+        """Analyze detailed interaction patterns"""
+        try:
+            analysis = {
+                'time_to_action': self._calculate_response_times(interaction_history),
+                'modification_patterns': self._analyze_changes(interaction_history),
+                'delegation_flow': self._track_task_assignments(interaction_history),
+                'subtask_creation': self._analyze_task_breakdown(interaction_history)
+            }
+            logger.info(f"Analyzed interaction patterns: {len(interaction_history)} events")
+            return analysis
+        except Exception as e:
+            logger.error(f"Error analyzing interaction patterns: {e}")
+            return {}
+
+    def _calculate_response_times(self, history: List[dict]) -> dict:
+        """Calculate time between viewing and taking action"""
+        try:
+            response_times = {
+                'view_to_accept': [],
+                'view_to_reject': [],
+                'view_to_modify': []
+            }
+            
+            # Group by suggestion_id
+            by_suggestion = {}
+            for event in history:
+                sid = event['suggestion_id']
+                by_suggestion.setdefault(sid, []).append(event)
+            
+            # Calculate times for each suggestion
+            for sid, events in by_suggestion.items():
+                events.sort(key=lambda x: x['timestamp'])
+                view_time = next((e['timestamp'] for e in events if e['action'] == 'viewed'), None)
+                
+                if view_time:
+                    for event in events:
+                        if event['timestamp'] > view_time:
+                            key = f"view_to_{event['action']}"
+                            if key in response_times:
+                                response_times[key].append(event['timestamp'] - view_time)
+            
+            # Calculate statistics
+            return {
+                action: {
+                    'avg': sum(times) / len(times) if times else None,
+                    'min': min(times) if times else None,
+                    'max': max(times) if times else None,
+                    'count': len(times)
+                }
+                for action, times in response_times.items()
+            }
+        except Exception as e:
+            logger.error(f"Error calculating response times: {e}")
+            return {}
+
+    def _analyze_changes(self, history: List[dict]) -> dict:
+        """Analyze patterns in how suggestions are modified"""
+        try:
+            modifications = {
+                'types': {},  # Types of modifications made
+                'frequency': {},  # How often certain modifications occur
+                'common_sequences': []  # Common sequences of modifications
+            }
+            
+            for event in history:
+                if event['action'] == 'modified':
+                    mod_type = event.get('metadata', {}).get('modification_type', 'unknown')
+                    modifications['types'].setdefault(mod_type, 0)
+                    modifications['types'][mod_type] += 1
+            
+            # Analyze sequences
+            sequences = self._extract_modification_sequences(history)
+            modifications['common_sequences'] = self._find_common_sequences(sequences)
+            
+            return modifications
+        except Exception as e:
+            logger.error(f"Error analyzing changes: {e}")
+            return {}
+
+    def _track_task_assignments(self, history: List[dict]) -> dict:
+        """Track how tasks are delegated and reassigned"""
+        try:
+            assignments = {
+                'delegation_patterns': {},
+                'reassignment_frequency': {},
+                'completion_rates': {}
+            }
+            
+            for event in history:
+                if 'assignment' in event.get('metadata', {}):
+                    assignment = event['metadata']['assignment']
+                    assignments['delegation_patterns'].setdefault(assignment['from_user'], {})
+                    assignments['delegation_patterns'][assignment['from_user']].setdefault(assignment['to_user'], 0)
+                    assignments['delegation_patterns'][assignment['from_user']][assignment['to_user']] += 1
+            
+            return assignments
+        except Exception as e:
+            logger.error(f"Error tracking assignments: {e}")
+            return {}
+
+    def _analyze_task_breakdown(self, history: List[dict]) -> dict:
+        """Analyze patterns in how tasks are broken down into subtasks"""
+        try:
+            breakdown_patterns = {
+                'avg_subtasks': 0,
+                'common_structures': {},
+                'depth_distribution': {}
+            }
+            
+            subtask_counts = []
+            for event in history:
+                if 'subtasks' in event.get('metadata', {}):
+                    subtasks = event['metadata']['subtasks']
+                    subtask_counts.append(len(subtasks))
+                    
+                    # Analyze structure
+                    structure = self._analyze_subtask_structure(subtasks)
+                    structure_key = str(structure)
+                    breakdown_patterns['common_structures'].setdefault(structure_key, 0)
+                    breakdown_patterns['common_structures'][structure_key] += 1
+            
+            if subtask_counts:
+                breakdown_patterns['avg_subtasks'] = sum(subtask_counts) / len(subtask_counts)
+            
+            return breakdown_patterns
+        except Exception as e:
+            logger.error(f"Error analyzing task breakdown: {e}")
+            return {}
+
+    @staticmethod
+    def _extract_modification_sequences(history: List[dict]) -> List[List[str]]:
+        """Extract sequences of modifications from history"""
+        sequences = []
+        current_sequence = []
+        
+        for event in history:
+            if event['action'] == 'modified':
+                current_sequence.append(event.get('metadata', {}).get('modification_type', 'unknown'))
+            else:
+                if current_sequence:
+                    sequences.append(current_sequence)
+                    current_sequence = []
+        
+        if current_sequence:
+            sequences.append(current_sequence)
+        
+        return sequences
+
+    @staticmethod
+    def _find_common_sequences(sequences: List[List[str]], min_length: int = 2) -> List[dict]:
+        """Find common sequences of modifications"""
+        sequence_counts = {}
+        
+        for sequence in sequences:
+            if len(sequence) >= min_length:
+                seq_key = tuple(sequence)
+                sequence_counts.setdefault(seq_key, 0)
+                sequence_counts[seq_key] += 1
+        
+        # Sort by frequency and convert to list of dicts
+        return [
+            {'sequence': list(seq), 'count': count}
+            for seq, count in sorted(sequence_counts.items(), key=lambda x: x[1], reverse=True)
+        ]
+
+    @staticmethod
+    def _analyze_subtask_structure(subtasks: List[dict], max_depth: int = 5) -> dict:
+        """Analyze the structure of subtasks"""
+        def analyze_level(tasks, current_depth=0):
+            if current_depth >= max_depth or not tasks:
+                return {'count': 0}
+            
+            result = {'count': len(tasks)}
+            child_structures = [
+                analyze_level(task.get('subtasks', []), current_depth + 1)
+                for task in tasks
+            ]
+            
+            if child_structures:
+                result['children'] = child_structures
+            
+            return result
+        
+        return analyze_level(subtasks)
 
 
 # ---------------------------------------------------------------------------
 # CLASS: TemporalAnalysis
 # ---------------------------------------------------------------------------
 class TemporalAnalysis:
-    """
-    Analyzes time-based patterns that affect success, e.g. time of day or day of week
-    that tasks are more successfully completed.
-    """
-
-    def analyze_patterns(self, historical_data):
-        """Evaluate time-based patterns in the historical_data."""
-        if not historical_data:
-            return {
-                "completions_by_hour": [0] * 24,
-                "completions_by_day": [0] * 7,
-                "avg_completion_time_by_hour": [0] * 24,
-                "success_rate_by_day": [0] * 7
-            }
-
-        completions_by_hour = [0] * 24
-        completions_by_day = [0] * 7
-        completion_times_by_hour = [[] for _ in range(24)]
-        attempts_by_day = [0] * 7
-        successes_by_day = [0] * 7
-
-        for item in historical_data:
-            created_at = item.get('created_at')
-            completed_at = item.get('completed_at')
+    """Analyzes time-based patterns in task completion and project phases"""
+    
+    def analyze_patterns(self, task_history: List[dict]) -> dict:
+        """Analyze time-based patterns in task completion"""
+        try:
+            # Get basic temporal metrics
+            basic_metrics = self._analyze_basic_patterns(task_history)
             
-            if isinstance(completed_at, (int, float)):
-                completion_dt = datetime.fromtimestamp(completed_at)
-                completions_by_hour[completion_dt.hour] += 1
-                completions_by_day[completion_dt.weekday()] += 1
+            # Find optimal suggestion times
+            optimal_times = self._find_optimal_suggestion_times(task_history)
+            
+            # Analyze day patterns
+            day_patterns = self._analyze_day_patterns(task_history)
+            
+            # Analyze project phase correlation
+            phase_patterns = self._analyze_project_phase_correlation(task_history)
+            
+            return {
+                **basic_metrics,
+                "optimal_times": optimal_times,
+                "day_patterns": day_patterns,
+                "phase_patterns": phase_patterns
+            }
+        except Exception as e:
+            logger.error(f"Error analyzing temporal patterns: {e}")
+            return {}
 
-                if isinstance(created_at, (int, float)):
-                    completion_time = (completed_at - created_at) / 3600  # hours
-                    completion_times_by_hour[completion_dt.hour].append(completion_time)
+    def _find_optimal_suggestion_times(self, task_history: List[dict]) -> dict:
+        """Find optimal times for task suggestions based on success rates"""
+        try:
+            hourly_success = {i: {"attempts": 0, "successes": 0} for i in range(24)}
+            
+            for task in task_history:
+                if task.get('created_at'):
+                    hour = datetime.fromtimestamp(task['created_at']).hour
+                    hourly_success[hour]["attempts"] += 1
+                    
+                    if task.get('completed_at'):
+                        hourly_success[hour]["successes"] += 1
+            
+            # Calculate success rates and identify optimal times
+            optimal_hours = []
+            for hour, stats in hourly_success.items():
+                if stats["attempts"] > 0:
+                    success_rate = stats["successes"] / stats["attempts"]
+                    if success_rate > 0.7:  # Consider hours with >70% success rate optimal
+                        optimal_hours.append({
+                            "hour": hour,
+                            "success_rate": success_rate,
+                            "sample_size": stats["attempts"]
+                        })
+            
+            return {
+                "optimal_hours": sorted(optimal_hours, key=lambda x: x["success_rate"], reverse=True),
+                "hourly_stats": hourly_success
+            }
+        except Exception as e:
+            logger.error(f"Error finding optimal times: {e}")
+            return {}
 
-            if isinstance(created_at, (int, float)):
-                created_dt = datetime.fromtimestamp(created_at)
-                attempts_by_day[created_dt.weekday()] += 1
-                if completed_at:
-                    successes_by_day[created_dt.weekday()] += 1
+    def _analyze_day_patterns(self, task_history: List[dict]) -> dict:
+        """Analyze patterns in day-to-day task completion"""
+        try:
+            daily_patterns = {
+                "weekday_distribution": {},
+                "day_transitions": {},
+                "weekly_cycles": []
+            }
+            
+            # Analyze weekday distribution
+            for task in task_history:
+                if task.get('completed_at'):
+                    weekday = datetime.fromtimestamp(task['completed_at']).strftime('%A')
+                    daily_patterns["weekday_distribution"].setdefault(weekday, 0)
+                    daily_patterns["weekday_distribution"][weekday] += 1
+            
+            # Analyze day-to-day transitions
+            sorted_tasks = sorted(task_history, key=lambda x: x.get('completed_at', 0))
+            for i in range(len(sorted_tasks) - 1):
+                if sorted_tasks[i].get('completed_at') and sorted_tasks[i+1].get('completed_at'):
+                    day1 = datetime.fromtimestamp(sorted_tasks[i]['completed_at']).strftime('%A')
+                    day2 = datetime.fromtimestamp(sorted_tasks[i+1]['completed_at']).strftime('%A')
+                    transition = f"{day1}->{day2}"
+                    daily_patterns["day_transitions"].setdefault(transition, 0)
+                    daily_patterns["day_transitions"][transition] += 1
+            
+            # Analyze weekly cycles
+            weekly_tasks = self._group_by_week(task_history)
+            daily_patterns["weekly_cycles"] = self._analyze_weekly_patterns(weekly_tasks)
+            
+            return daily_patterns
+        except Exception as e:
+            logger.error(f"Error analyzing day patterns: {e}")
+            return {}
 
-        # Calculate average completion time by hour
-        avg_completion_time_by_hour = [
-            sum(times) / len(times) if times else 0 
-            for times in completion_times_by_hour
-        ]
+    def _analyze_project_phase_correlation(self, task_history: List[dict]) -> dict:
+        """Analyze how project phases affect task completion patterns"""
+        try:
+            phase_patterns = {
+                "phase_success_rates": {},
+                "phase_velocity": {},
+                "transition_impacts": {},
+                "phase_duration_stats": {}
+            }
+            
+            # Group tasks by project phase
+            phase_groups = {}
+            for task in task_history:
+                phase = task.get('project_phase', 'unknown')
+                phase_groups.setdefault(phase, []).append(task)
+            
+            # Calculate success rates per phase
+            for phase, tasks in phase_groups.items():
+                completed = len([t for t in tasks if t.get('completed_at')])
+                total = len(tasks)
+                phase_patterns["phase_success_rates"][phase] = {
+                    "success_rate": completed / total if total > 0 else 0,
+                    "sample_size": total
+                }
+            
+            # Calculate velocity per phase
+            for phase, tasks in phase_groups.items():
+                if tasks:
+                    start_time = min(t.get('created_at', float('inf')) for t in tasks)
+                    end_time = max(t.get('completed_at', 0) for t in tasks)
+                    duration = end_time - start_time if end_time > start_time else 1
+                    completed_tasks = len([t for t in tasks if t.get('completed_at')])
+                    phase_patterns["phase_velocity"][phase] = completed_tasks / (duration / 86400)  # tasks per day
+            
+            # Analyze phase transitions
+            phase_patterns["transition_impacts"] = self._analyze_phase_transitions(task_history)
+            
+            # Calculate phase duration statistics
+            phase_patterns["phase_duration_stats"] = self._calculate_phase_durations(phase_groups)
+            
+            return phase_patterns
+        except Exception as e:
+            logger.error(f"Error analyzing project phase correlation: {e}")
+            return {}
 
-        # Calculate success rate by day
-        success_rate_by_day = [
-            successes_by_day[i] / attempts_by_day[i] if attempts_by_day[i] > 0 else 0
-            for i in range(7)
-        ]
+    @staticmethod
+    def _group_by_week(task_history: List[dict]) -> Dict[int, List[dict]]:
+        """Group tasks by week number"""
+        weekly_tasks = {}
+        for task in task_history:
+            if task.get('completed_at'):
+                week = datetime.fromtimestamp(task['completed_at']).isocalendar()[1]
+                weekly_tasks.setdefault(week, []).append(task)
+        return weekly_tasks
 
-        return {
-            "completions_by_hour": completions_by_hour,
-            "completions_by_day": completions_by_day,
-            "avg_completion_time_by_hour": avg_completion_time_by_hour,
-            "success_rate_by_day": success_rate_by_day
-        }
+    @staticmethod
+    def _analyze_weekly_patterns(weekly_tasks: Dict[int, List[dict]]) -> List[dict]:
+        """Analyze patterns in weekly task completion"""
+        weekly_patterns = []
+        for week, tasks in weekly_tasks.items():
+            pattern = {
+                "week": week,
+                "total_tasks": len(tasks),
+                "daily_distribution": {},
+                "task_types": {}
+            }
+            
+            for task in tasks:
+                # Daily distribution
+                if task.get('completed_at'):
+                    day = datetime.fromtimestamp(task['completed_at']).strftime('%A')
+                    pattern["daily_distribution"].setdefault(day, 0)
+                    pattern["daily_distribution"][day] += 1
+                
+                # Task type distribution
+                task_type = task.get('type', 'unknown')
+                pattern["task_types"].setdefault(task_type, 0)
+                pattern["task_types"][task_type] += 1
+            
+            weekly_patterns.append(pattern)
+        
+        return weekly_patterns
+
+    @staticmethod
+    def _analyze_phase_transitions(task_history: List[dict]) -> dict:
+        """Analyze the impact of phase transitions on task completion"""
+        transitions = {}
+        sorted_tasks = sorted(task_history, key=lambda x: x.get('created_at', 0))
+        
+        for i in range(len(sorted_tasks) - 1):
+            current_phase = sorted_tasks[i].get('project_phase')
+            next_phase = sorted_tasks[i + 1].get('project_phase')
+            
+            if current_phase and next_phase and current_phase != next_phase:
+                transition = f"{current_phase}->{next_phase}"
+                transitions.setdefault(transition, {
+                    "count": 0,
+                    "avg_completion_time": 0,
+                    "success_rate": 0
+                })
+                transitions[transition]["count"] += 1
+                
+                # Calculate completion time if both tasks were completed
+                if (sorted_tasks[i].get('completed_at') and 
+                    sorted_tasks[i + 1].get('completed_at')):
+                    completion_time = (sorted_tasks[i + 1]['completed_at'] - 
+                                    sorted_tasks[i + 1]['created_at'])
+                    transitions[transition]["avg_completion_time"] += completion_time
+        
+        # Calculate averages
+        for stats in transitions.values():
+            if stats["count"] > 0:
+                stats["avg_completion_time"] /= stats["count"]
+        
+        return transitions
+
+    @staticmethod
+    def _calculate_phase_durations(phase_groups: Dict[str, List[dict]]) -> dict:
+        """Calculate duration statistics for each project phase"""
+        duration_stats = {}
+        
+        for phase, tasks in phase_groups.items():
+            completed_tasks = [t for t in tasks if t.get('completed_at') and t.get('created_at')]
+            if completed_tasks:
+                durations = [(t['completed_at'] - t['created_at']) / 3600 for t in completed_tasks]  # hours
+                duration_stats[phase] = {
+                    "avg_duration": sum(durations) / len(durations),
+                    "min_duration": min(durations),
+                    "max_duration": max(durations),
+                    "sample_size": len(completed_tasks)
+                }
+        
+        return duration_stats
 
 
 # ---------------------------------------------------------------------------
 # CLASS: FeedbackCollector
 # ---------------------------------------------------------------------------
 class FeedbackCollector:
-    """
-    Collects feedback from tasks, GitHub activity, user interactions, and temporal data.
-    """
-
+    """Collects and analyzes feedback from multiple sources"""
+    
     def __init__(self, github_monitor: GitHubActivityMonitor, user_tracker: UserInteractionTracker, temporal_analyzer: TemporalAnalysis):
         self.github_monitor = github_monitor
         self.user_tracker = user_tracker
         self.temporal_analyzer = temporal_analyzer
 
-    def collect_feedback(self, suggestion_id):
-        """
-        Aggregate feedback from all sources for a given suggestion.
+    def collect_feedback(self, suggestion_id: str) -> dict:
+        """Collect comprehensive feedback for a suggestion"""
+        try:
+            # Get user interactions
+            interactions = self.user_tracker.track_interactions(suggestion_id)
+            
+            # Get task history
+            task_history = self.github_monitor.get_tasks().get("tasks", [])
+            
+            # Calculate comprehensive metrics
+            metrics = self.calculate_outcome_metrics(task_history, interactions)
+            
+            feedback_data = {
+                "suggestion_id": suggestion_id,
+                "timestamp": time.time(),
+                "user_interactions": interactions,
+                "metrics": metrics,
+                "success_indicators": self.identify_success_patterns(task_history, interactions),
+                "failure_patterns": self.identify_failure_patterns(task_history, interactions),
+                "recommendations": self.generate_recommendations(task_history, interactions)
+            }
+            
+            return feedback_data
+        except Exception as e:
+            logger.error(f"Error collecting feedback: {e}")
+            return {}
 
-        :param suggestion_id: the ID for which feedback is being collected
-        :return: dict containing combined feedback info
-        """
-        # In a real scenario, we might gather relevant tasks, call track_related_activity, etc.
-        # Here, we'll do a simple demonstration:
-        interactions = self.user_tracker.track_interactions(suggestion_id)
-        feedback_data = {
-            "suggestion_id": suggestion_id,
-            "user_interactions": interactions,
-            "collected_at": time.time()
+    def calculate_outcome_metrics(self, task_history: List[dict], interactions: List[dict]) -> dict:
+        """Calculate comprehensive outcome metrics"""
+        try:
+            metrics = {
+                "task_metrics": self._calculate_task_metrics(task_history),
+                "interaction_metrics": self._calculate_interaction_metrics(interactions),
+                "correlation_metrics": self._calculate_correlation_metrics(task_history, interactions),
+                "trend_metrics": self._calculate_trend_metrics(task_history, interactions)
+            }
+            return metrics
+        except Exception as e:
+            logger.error(f"Error calculating outcome metrics: {e}")
+            return {}
+
+    def identify_success_patterns(self, task_history: List[dict], interactions: List[dict]) -> dict:
+        """Identify patterns that lead to successful outcomes"""
+        try:
+            patterns = {
+                "task_patterns": self._analyze_successful_tasks(task_history),
+                "interaction_patterns": self._analyze_successful_interactions(interactions),
+                "timing_patterns": self._analyze_timing_success(task_history, interactions),
+                "sequence_patterns": self._analyze_successful_sequences(task_history, interactions)
+            }
+            return patterns
+        except Exception as e:
+            logger.error(f"Error identifying success patterns: {e}")
+            return {}
+
+    def identify_failure_patterns(self, task_history: List[dict], interactions: List[dict]) -> dict:
+        """Identify patterns that lead to unsuccessful outcomes"""
+        try:
+            patterns = {
+                "task_failures": self._analyze_failed_tasks(task_history),
+                "interaction_failures": self._analyze_failed_interactions(interactions),
+                "bottlenecks": self._identify_bottlenecks(task_history, interactions),
+                "risk_factors": self._identify_risk_factors(task_history, interactions)
+            }
+            return patterns
+        except Exception as e:
+            logger.error(f"Error identifying failure patterns: {e}")
+            return {}
+
+    def generate_recommendations(self, task_history: List[dict], interactions: List[dict]) -> List[dict]:
+        """Generate actionable recommendations based on feedback analysis"""
+        try:
+            recommendations = []
+            
+            # Analyze task optimization opportunities
+            task_recommendations = self._generate_task_recommendations(task_history)
+            recommendations.extend(task_recommendations)
+            
+            # Analyze interaction improvements
+            interaction_recommendations = self._generate_interaction_recommendations(interactions)
+            recommendations.extend(interaction_recommendations)
+            
+            # Analyze process improvements
+            process_recommendations = self._generate_process_recommendations(task_history, interactions)
+            recommendations.extend(process_recommendations)
+            
+            return recommendations
+        except Exception as e:
+            logger.error(f"Error generating recommendations: {e}")
+            return []
+
+    def _calculate_task_metrics(self, task_history: List[dict]) -> dict:
+        """Calculate task-specific metrics"""
+        try:
+            completed_tasks = [t for t in task_history if t.get('completed_at')]
+            total_tasks = len(task_history)
+            
+            return {
+                "completion_rate": len(completed_tasks) / total_tasks if total_tasks > 0 else 0,
+                "avg_completion_time": self._calculate_avg_completion_time(completed_tasks),
+                "priority_distribution": self._calculate_priority_distribution(task_history),
+                "type_distribution": self._calculate_type_distribution(task_history)
+            }
+        except Exception as e:
+            logger.error(f"Error calculating task metrics: {e}")
+            return {}
+
+    def _calculate_interaction_metrics(self, interactions: List[dict]) -> dict:
+        """Calculate interaction-specific metrics"""
+        try:
+            return {
+                "response_times": self._calculate_response_times(interactions),
+                "modification_rates": self._calculate_modification_rates(interactions),
+                "acceptance_rates": self._calculate_acceptance_rates(interactions),
+                "engagement_metrics": self._calculate_engagement_metrics(interactions)
+            }
+        except Exception as e:
+            logger.error(f"Error calculating interaction metrics: {e}")
+            return {}
+
+    def _calculate_correlation_metrics(self, task_history: List[dict], interactions: List[dict]) -> dict:
+        """Calculate correlation between tasks and interactions"""
+        try:
+            return {
+                "interaction_success_correlation": self._correlate_interactions_with_success(task_history, interactions),
+                "timing_impact": self._analyze_timing_impact(task_history, interactions),
+                "modification_impact": self._analyze_modification_impact(task_history, interactions)
+            }
+        except Exception as e:
+            logger.error(f"Error calculating correlation metrics: {e}")
+            return {}
+
+    def _calculate_trend_metrics(self, task_history: List[dict], interactions: List[dict]) -> dict:
+        """Calculate trend metrics over time"""
+        try:
+            return {
+                "completion_trends": self._analyze_completion_trends(task_history),
+                "interaction_trends": self._analyze_interaction_trends(interactions),
+                "quality_trends": self._analyze_quality_trends(task_history, interactions)
+            }
+        except Exception as e:
+            logger.error(f"Error calculating trend metrics: {e}")
+            return {}
+
+    # Helper methods for success pattern analysis
+    def _analyze_successful_tasks(self, tasks: List[dict]) -> dict:
+        """Analyze patterns in successfully completed tasks"""
+        successful_patterns = {
+            "common_attributes": {},
+            "timing_patterns": {},
+            "dependency_patterns": {}
         }
-        return feedback_data
+        # Implementation details...
+        return successful_patterns
 
-    def aggregate_feedback(self, *feedback_sources):
-        """
-        Combine feedback from multiple sources into a single structured dict.
+    def _analyze_successful_interactions(self, interactions: List[dict]) -> dict:
+        """Analyze patterns in successful interactions"""
+        interaction_patterns = {
+            "effective_sequences": [],
+            "optimal_timing": {},
+            "user_preferences": {}
+        }
+        # Implementation details...
+        return interaction_patterns
 
-        :param feedback_sources: One or more dicts of feedback
-        :return: A single merged dict
-        """
-        merged = {}
-        for source in feedback_sources:
-            merged.update(source)
-        return merged
+    # Helper methods for failure pattern analysis
+    def _analyze_failed_tasks(self, tasks: List[dict]) -> dict:
+        """Analyze patterns in failed or incomplete tasks"""
+        failure_patterns = {
+            "common_blockers": {},
+            "risk_indicators": {},
+            "abandonment_patterns": {}
+        }
+        # Implementation details...
+        return failure_patterns
+
+    def _identify_bottlenecks(self, tasks: List[dict], interactions: List[dict]) -> dict:
+        """Identify system and process bottlenecks"""
+        bottlenecks = {
+            "process_bottlenecks": {},
+            "resource_constraints": {},
+            "communication_gaps": {}
+        }
+        # Implementation details...
+        return bottlenecks
+
+    # Helper methods for recommendation generation
+    def _generate_task_recommendations(self, tasks: List[dict]) -> List[dict]:
+        """Generate task-specific recommendations"""
+        recommendations = []
+        # Implementation details...
+        return recommendations
+
+    def _generate_process_recommendations(self, tasks: List[dict], interactions: List[dict]) -> List[dict]:
+        """Generate process improvement recommendations"""
+        recommendations = []
+        # Implementation details...
+        return recommendations
+
+    def aggregate_feedback(self, *feedback_sources: dict) -> dict:
+        """Aggregate and normalize feedback from multiple sources"""
+        try:
+            aggregated = {
+                "timestamp": time.time(),
+                "metrics": {},
+                "patterns": {},
+                "recommendations": []
+            }
+            
+            for source in feedback_sources:
+                self._merge_metrics(aggregated["metrics"], source.get("metrics", {}))
+                self._merge_patterns(aggregated["patterns"], source.get("patterns", {}))
+                self._merge_recommendations(aggregated["recommendations"], source.get("recommendations", []))
+            
+            return aggregated
+        except Exception as e:
+            logger.error(f"Error aggregating feedback: {e}")
+            return {}
+
+    @staticmethod
+    def _merge_metrics(target: dict, source: dict) -> None:
+        """Merge metrics with proper weighting and normalization"""
+        for key, value in source.items():
+            if key not in target:
+                target[key] = value
+            else:
+                # Implement proper merging logic based on metric type
+                if isinstance(value, (int, float)):
+                    target[key] = (target[key] + value) / 2
+                elif isinstance(value, dict):
+                    if not isinstance(target[key], dict):
+                        target[key] = {}
+                    FeedbackCollector._merge_metrics(target[key], value)
+
+    @staticmethod
+    def _merge_patterns(target: dict, source: dict) -> None:
+        """Merge patterns with frequency counting"""
+        for key, value in source.items():
+            if key not in target:
+                target[key] = value
+            else:
+                if isinstance(value, dict):
+                    if not isinstance(target[key], dict):
+                        target[key] = {}
+                    FeedbackCollector._merge_patterns(target[key], value)
+                elif isinstance(value, list):
+                    target[key].extend(value)
+
+    @staticmethod
+    def _merge_recommendations(target: List, source: List) -> None:
+        """Merge recommendations with deduplication"""
+        seen = {str(r): r for r in target}
+        for rec in source:
+            rec_key = str(rec)
+            if rec_key not in seen:
+                target.append(rec)
 
 
 # ---------------------------------------------------------------------------
@@ -795,6 +1359,151 @@ class TaskAnalysisService:
             'completion_by_type': types,
             'avg_dependencies': sum(dependency_counts) / len(dependency_counts) if dependency_counts else 0
         }
+
+    def calculate_velocity_impact(self, task_history: List[dict]) -> dict:
+        """Calculate impact on project velocity"""
+        try:
+            # Calculate completion rate trend
+            completion_rates = self._calculate_completion_rate_trend(task_history)
+            
+            # Analyze velocity over time
+            velocity_trend = self._analyze_velocity_over_time(task_history)
+            
+            # Identify bottlenecks
+            bottlenecks = self._identify_bottlenecks(task_history)
+            
+            return {
+                'completion_rate_change': completion_rates,
+                'velocity_trend': velocity_trend,
+                'bottleneck_analysis': bottlenecks
+            }
+        except Exception as e:
+            logger.error(f"Error calculating velocity impact: {e}")
+            return {}
+
+    def _calculate_completion_rate_trend(self, task_history: List[dict]) -> dict:
+        """Calculate trend in task completion rates"""
+        try:
+            # Group tasks by week
+            weeks = {}
+            for task in task_history:
+                if task.get('completed_at'):
+                    week = datetime.fromtimestamp(task['completed_at']).isocalendar()[1]
+                    weeks.setdefault(week, {'completed': 0, 'total': 0})
+                    weeks[week]['completed'] += 1
+                weeks.setdefault(week, {'completed': 0, 'total': 0})
+                weeks[week]['total'] += 1
+            
+            # Calculate rates and trend
+            rates = []
+            for week in sorted(weeks.keys()):
+                rate = weeks[week]['completed'] / weeks[week]['total'] if weeks[week]['total'] > 0 else 0
+                rates.append({'week': week, 'rate': rate})
+            
+            return {
+                'weekly_rates': rates,
+                'trend': self._calculate_trend(rates)
+            }
+        except Exception as e:
+            logger.error(f"Error calculating completion rate trend: {e}")
+            return {}
+
+    def _analyze_velocity_over_time(self, task_history: List[dict]) -> dict:
+        """Analyze how velocity changes over time"""
+        try:
+            # Track completed tasks per day
+            daily_velocity = {}
+            for task in task_history:
+                if task.get('completed_at'):
+                    day = datetime.fromtimestamp(task['completed_at']).date().isoformat()
+                    daily_velocity.setdefault(day, 0)
+                    daily_velocity[day] += 1
+            
+            # Calculate moving average
+            window_size = 7
+            moving_avg = []
+            days = sorted(daily_velocity.keys())
+            for i in range(len(days) - window_size + 1):
+                window = [daily_velocity[days[j]] for j in range(i, i + window_size)]
+                avg = sum(window) / window_size
+                moving_avg.append({'date': days[i + window_size - 1], 'velocity': avg})
+            
+            return {
+                'daily_velocity': [{'date': k, 'tasks': v} for k, v in daily_velocity.items()],
+                'moving_average': moving_avg
+            }
+        except Exception as e:
+            logger.error(f"Error analyzing velocity: {e}")
+            return {}
+
+    def _identify_bottlenecks(self, task_history: List[dict]) -> dict:
+        """Identify patterns that slow down task completion"""
+        try:
+            bottlenecks = {
+                'dependencies': {},
+                'duration': {},
+                'status_transitions': {}
+            }
+            
+            for task in task_history:
+                # Analyze dependency chains
+                if task.get('depends_on'):
+                    for dep in task['depends_on']:
+                        bottlenecks['dependencies'].setdefault(dep, 0)
+                        bottlenecks['dependencies'][dep] += 1
+                
+                # Analyze task duration
+                if task.get('completed_at') and task.get('created_at'):
+                    duration = task['completed_at'] - task['created_at']
+                    category = self._categorize_duration(duration)
+                    bottlenecks['duration'].setdefault(category, 0)
+                    bottlenecks['duration'][category] += 1
+                
+                # Analyze status transitions
+                if task.get('status_history'):
+                    for i in range(len(task['status_history']) - 1):
+                        transition = f"{task['status_history'][i]} -> {task['status_history'][i+1]}"
+                        bottlenecks['status_transitions'].setdefault(transition, 0)
+                        bottlenecks['status_transitions'][transition] += 1
+            
+            return bottlenecks
+        except Exception as e:
+            logger.error(f"Error identifying bottlenecks: {e}")
+            return {}
+
+    @staticmethod
+    def _calculate_trend(data: List[dict]) -> float:
+        """Calculate linear trend from time series data"""
+        try:
+            if not data:
+                return 0
+            x = list(range(len(data)))
+            y = [item['rate'] for item in data]
+            
+            # Simple linear regression
+            n = len(data)
+            sum_x = sum(x)
+            sum_y = sum(y)
+            sum_xy = sum(x_i * y_i for x_i, y_i in zip(x, y))
+            sum_xx = sum(x_i * x_i for x_i in x)
+            
+            slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x)
+            return slope
+        except Exception as e:
+            logger.error(f"Error calculating trend: {e}")
+            return 0
+
+    @staticmethod
+    def _categorize_duration(duration: float) -> str:
+        """Categorize task duration into buckets"""
+        if duration < 3600:  # 1 hour
+            return "quick"
+        elif duration < 86400:  # 1 day
+            return "medium"
+        elif duration < 604800:  # 1 week
+            return "long"
+        else:
+            return "extended"
 
 
 # ---------------------------------------------------------------------------
