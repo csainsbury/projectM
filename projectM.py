@@ -42,6 +42,7 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from time import sleep
 from github import RateLimitExceededException
+from werkzeug.utils import secure_filename
 
 # Configure logging
 logging.basicConfig(
@@ -1187,26 +1188,27 @@ class LLMService:
         """
         Construct a prompt from the context, call Gemini, and return an actionable suggestion.
         """
-        user_query = context.get("user_query", "No user query provided.")
-        tasks = context.get('repo_info', {}).get('tasks', [])
-        feedback_data = context.get('repo_info', {}).get('feedback', {})
-        
-        # Format tasks for better readability
-        formatted_tasks = []
-        for task in tasks:
-            if isinstance(task, dict):
-                if task.get('type') == 'text':
-                    # For text files, include a summary
-                    formatted_tasks.append({
-                        'id': task.get('id'),
-                        'type': 'text',
-                        'summary': task.get('content', '')[:200] + '...' if len(task.get('content', '')) > 200 else task.get('content', '')
-                    })
-                else:
-                    # For JSON tasks, include all fields
-                    formatted_tasks.append(task)
-        
-        prompt_text = f"""
+        try:
+            user_query = context.get("user_query", "No user query provided.")
+            tasks = context.get('repo_info', {}).get('tasks', [])
+            feedback_data = context.get('repo_info', {}).get('feedback', {})
+            
+            # Format tasks for better readability
+            formatted_tasks = []
+            for task in tasks:
+                if isinstance(task, dict):
+                    if task.get('type') == 'text':
+                        # For text files, include a summary
+                        formatted_tasks.append({
+                            'id': task.get('id'),
+                            'type': 'text',
+                            'summary': task.get('content', '')[:200] + '...' if len(task.get('content', '')) > 200 else task.get('content', '')
+                        })
+                    else:
+                        # For JSON tasks, include all fields
+                        formatted_tasks.append(task)
+            
+            prompt_text = f"""
 User Query: {user_query}
 
 Available Tasks:
@@ -1228,55 +1230,36 @@ Consider:
 Provide a detailed suggestion based on this comprehensive context.
 """
 
-        print("\n=== Final Prompt Being Sent to LLM ===")
-        print(prompt_text)
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt_text}
+                        ]
+                    }
+                ]
+            }
 
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": prompt_text}
-                    ]
-                }
-            ]
-        }
+            response = requests.post(self.gemini_endpoint, json=payload)
+            response_data = response.json()
 
-        print("\n=== API Payload Size ===")
-        payload_size = len(json.dumps(payload))
-        print(f"Payload size: {payload_size} characters")
+            # Extract the text from Gemini's response
+            if 'candidates' in response_data:
+                for candidate in response_data['candidates']:
+                    if 'content' in candidate:
+                        content = candidate['content']
+                        if 'parts' in content:
+                            for part in content['parts']:
+                                if 'text' in part:
+                                    return part['text']
 
-        print("\n=== API Payload ===")
-        print(json.dumps(payload, indent=2))
+            # If we couldn't find the text in the expected structure, return the raw response
+            logger.warning("Unexpected response structure from Gemini")
+            return str(response_data)
 
-        try:
-            response = requests.post(
-                self.gemini_endpoint,
-                headers={"Content-Type": "application/json"},
-                json=payload,
-                timeout=60  # Keep longer timeout just in case
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            print("\n=== API Response ===")
-            print(json.dumps(data, indent=2))
-            
-            suggestions = data.get("candidates", [{}])
-            if suggestions:
-                text_suggestion = suggestions[0].get("content", "No suggestion content found.")
-            else:
-                text_suggestion = "No suggestions returned from Gemini."
-        except requests.exceptions.Timeout:
-            print("\n[ERROR] API request timed out.")
-            text_suggestion = "Error: API request timed out."
-        except requests.exceptions.RequestException as e:
-            print(f"\n[ERROR] API request failed: {str(e)}")
-            text_suggestion = f"Error contacting LLM: {str(e)}"
         except Exception as e:
-            print(f"\n[ERROR] Unexpected error: {str(e)}")
-            text_suggestion = f"Unexpected error: {str(e)}"
-
-        return text_suggestion
+            logger.error(f"Error generating suggestion: {e}")
+            return f"Error generating suggestion: {str(e)}"
 
 
 # ---------------------------------------------------------------------------
@@ -1911,6 +1894,89 @@ def sync_local_to_github(file_pattern='inbox'):
     except Exception as e:
         logger.error(f"Failed to initialize GitHub sync: {str(e)}")
         raise
+
+@app.route('/api/projects', methods=['GET'])
+def get_projects():
+    """Get list of project files"""
+    try:
+        tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
+        project_files = [f for f in os.listdir(tasks_dir) 
+                        if f.startswith('project_') and f.endswith('.txt')]
+        return jsonify({
+            'success': True,
+            'projects': project_files
+        })
+    except Exception as e:
+        logger.error(f"Error getting projects: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/project/<project_name>', methods=['GET', 'POST'])
+def handle_project(project_name):
+    """Handle project file operations"""
+    try:
+        tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
+        file_path = os.path.join(tasks_dir, project_name)
+        
+        if request.method == 'GET':
+            with open(file_path, 'r') as f:
+                content = f.read()
+            return jsonify({
+                'success': True,
+                'content': content
+            })
+        else:  # POST
+            content = request.json.get('content')
+            with open(file_path, 'w') as f:
+                f.write(content)
+            return jsonify({
+                'success': True
+            })
+    except Exception as e:
+        logger.error(f"Error handling project {project_name}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    """Handle file uploads to tasks directory"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No file provided'
+            }), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': 'No file selected'
+            }), 400
+
+        # Secure the filename and save
+        filename = secure_filename(file.filename)
+        tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
+        file_path = os.path.join(tasks_dir, filename)
+        
+        # Save the file
+        file.save(file_path)
+        
+        logger.info(f"Successfully uploaded file: {filename}")
+        return jsonify({
+            'success': True,
+            'filename': filename
+        })
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == "__main__":
     try:

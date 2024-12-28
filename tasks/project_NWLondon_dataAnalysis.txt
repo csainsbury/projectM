@@ -19,5 +19,5 @@ could also aim to predict the development of diabetes (considering the potential
 
 <current status>
 slow progress
-there is a form that I need to finalise and send off (in task list inbox.csv)
+there is a form that I need to finalise and send off (this is listed as a task already)
 </current status>
