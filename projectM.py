@@ -1327,18 +1327,18 @@ class TaskAnalysisService:
     def analyze_completion_patterns(self, task_history: List[dict]) -> dict:
         """Analyze patterns in task completion"""
         try:
-            # Load completed tasks from feedback file
+            # Load completed tasks from completed_tasks.json
             completed_tasks = []
-            completed_path = os.path.join('feedback', 'completed_tasks.jsonl')
+            completed_file = os.path.join('tasks', 'completed_tasks.json')
+            if os.path.exists(completed_file):
+                with open(completed_file, 'r') as f:
+                    completed_tasks = json.load(f)
             
-            if os.path.exists(completed_path):
-                with jsonlines.open(completed_path) as reader:
-                    completed_tasks = list(reader)
-            
-            # Calculate metrics
+            # Calculate metrics including completed tasks
             total_tasks = len(task_history) + len(completed_tasks)
             completion_count = len(completed_tasks)
             
+            # Calculate completion patterns
             analysis = {
                 "completion_rate": completion_count / total_tasks if total_tasks > 0 else 0,
                 "completed_count": completion_count,
@@ -1346,9 +1346,10 @@ class TaskAnalysisService:
                 "avg_completion_time": self._calculate_avg_completion_time(completed_tasks),
                 "completion_by_priority": self._analyze_priority_patterns(completed_tasks),
                 "completion_by_type": self._analyze_type_patterns(completed_tasks),
-                "dependency_impact": self._analyze_dependencies(completed_tasks, task_history)
+                "completion_by_label": self._analyze_label_patterns(completed_tasks),
+                "recent_completions": self._get_recent_completions(completed_tasks, days=7)
             }
-
+            
             logger.info(f"Analyzed {completion_count} completed tasks out of {total_tasks} total tasks")
             return analysis
             
@@ -1361,8 +1362,25 @@ class TaskAnalysisService:
                 "avg_completion_time": 0,
                 "completion_by_priority": {},
                 "completion_by_type": {},
-                "dependency_impact": {}
+                "completion_by_label": {},
+                "recent_completions": []
             }
+
+    def _get_recent_completions(self, completed_tasks: List[dict], days: int = 7) -> List[dict]:
+        """Get tasks completed in the last N days"""
+        cutoff = int((datetime.now() - timedelta(days=days)).timestamp())
+        return [
+            task for task in completed_tasks
+            if task.get('completed_at', 0) > cutoff
+        ]
+
+    def _analyze_label_patterns(self, completed_tasks: List[dict]) -> Dict[str, int]:
+        """Analyze completion patterns by label"""
+        label_counts = {}
+        for task in completed_tasks:
+            for label in task.get('labels', []):
+                label_counts[label] = label_counts.get(label, 0) + 1
+        return label_counts
 
     def _calculate_avg_completion_time(self, completed_tasks: List[dict]) -> float:
         """Calculate average time to complete tasks"""

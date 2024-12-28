@@ -4,9 +4,13 @@ from datetime import datetime
 from todoist_api_python.api import TodoistAPI
 import logging
 from typing import Dict, List, Set
+from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
 
 class TaskManager:
     def __init__(self, api_token: str):
@@ -19,7 +23,9 @@ class TaskManager:
         try:
             # Load existing tasks
             existing_tasks = self._load_existing_tasks()
-            existing_task_ids = {task['id'] for task in existing_tasks.get('tasks', [])}
+            # Handle both list and dict formats
+            existing_task_list = existing_tasks if isinstance(existing_tasks, list) else existing_tasks.get('tasks', [])
+            existing_task_ids = {task['id'] for task in existing_task_list}
 
             # Get current tasks from Todoist
             current_tasks = self._get_todoist_tasks()
@@ -37,7 +43,7 @@ class TaskManager:
                         'completed_at': completion_time,
                         'completion_source': 'todoist'
                     }
-                    for task in existing_tasks.get('tasks', [])
+                    for task in existing_task_list
                     if task['id'] in completed_task_ids
                 ]
 
@@ -65,7 +71,7 @@ class TaskManager:
                     'priority': task.priority,
                     'due': task.due.date if task.due else None,
                     'labels': task.labels,
-                    'created_at': int(datetime.fromisoformat(task.created_at).timestamp())
+                    'created_at': int(datetime.strptime(task.created_at.replace('Z', '+00:00'), "%Y-%m-%dT%H:%M:%S.%f%z").timestamp())
                 }
                 for task in tasks
             ]
@@ -118,9 +124,9 @@ def main():
     """Main execution"""
     try:
         # Load API token from environment
-        api_token = os.getenv('TODOIST_API_TOKEN')
+        api_token = os.getenv('TODOIST_API_KEY')
         if not api_token:
-            raise ValueError("TODOIST_API_TOKEN not found in environment")
+            raise ValueError("TODOIST_API_KEY not found in environment")
 
         # Initialize task manager and update tasks
         task_manager = TaskManager(api_token)
