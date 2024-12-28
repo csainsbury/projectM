@@ -53,7 +53,7 @@
       "content": "draft LPAC form for PRESIDE [120m]",
       "description": "",
       "priority": 1,
-      "due": "2024-12-27",
+      "due": "2025-01-04",
       "labels": [
         "PRESIDE",
         "reclaim"
@@ -106,15 +106,6 @@
       "created_at": 1735042883
     },
     {
-      "id": "8716546066",
-      "content": "reply to paul anderson re mooring [5m]",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-04",
-      "labels": [],
-      "created_at": 1735397590
-    },
-    {
       "id": "8716547699",
       "content": "send tax forms [60m] @admin",
       "description": "",
@@ -148,6 +139,15 @@
         "reclaim"
       ],
       "created_at": 1735397784
+    },
+    {
+      "id": "8716860796",
+      "content": "EASD membership renewal. consider/renew? [20m]",
+      "description": "",
+      "priority": 1,
+      "due": "2024-12-30",
+      "labels": [],
+      "created_at": 1735407785
     }
   ]
 }

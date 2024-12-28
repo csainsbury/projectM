@@ -1128,20 +1128,29 @@ class ContextAggregator:
     def aggregate_context(self, query: str, repo_contents: dict) -> dict:
         """Aggregate context from various sources for the LLM"""
         try:
-            # Get tasks and feedback data
+            # Get current tasks
             tasks = repo_contents.get("tasks", [])
-            logger.info(f"Aggregating context with {len(tasks)} tasks")
+            
+            # Load completed tasks
+            completed_tasks = []
+            completed_file = os.path.join('tasks', 'completed_tasks.json')
+            if os.path.exists(completed_file):
+                with open(completed_file, 'r') as f:
+                    completed_tasks = json.load(f)
+            
+            logger.info(f"Aggregating context with {len(tasks)} current tasks and {len(completed_tasks)} completed tasks")
             
             # Load feedback data
             action_outcomes = self._load_feedback_data()
             success_patterns = self._load_success_patterns()
             temporal_analysis = self._load_temporal_analysis()
             
-            # Build context dictionary with feedback
+            # Build context dictionary with feedback and completed tasks
             context = {
                 "user_query": query,
                 "repo_info": {
                     "tasks": tasks,
+                    "completed_tasks": completed_tasks,  # Add completed tasks to context
                     "feedback": {
                         "action_outcomes": action_outcomes,
                         "success_patterns": success_patterns,
@@ -1150,7 +1159,7 @@ class ContextAggregator:
                 }
             }
             
-            logger.info(f"Context built with {len(tasks)} tasks and feedback data")
+            logger.info(f"Context built with {len(tasks)} current tasks, {len(completed_tasks)} completed tasks, and feedback data")
             return context
             
         except Exception as e:
@@ -1218,6 +1227,7 @@ class LLMService:
         try:
             user_query = context.get("user_query", "No user query provided.")
             tasks = context.get('repo_info', {}).get('tasks', [])
+            completed_tasks = context.get('repo_info', {}).get('completed_tasks', [])  # Get completed tasks
             feedback_data = context.get('repo_info', {}).get('feedback', {})
             
             # Format tasks for better readability
@@ -1225,14 +1235,12 @@ class LLMService:
             for task in tasks:
                 if isinstance(task, dict):
                     if task.get('type') == 'text':
-                        # For text files, include a summary
                         formatted_tasks.append({
                             'id': task.get('id'),
                             'type': 'text',
                             'summary': task.get('content', '')[:200] + '...' if len(task.get('content', '')) > 200 else task.get('content', '')
                         })
                     else:
-                        # For JSON tasks, include all fields
                         formatted_tasks.append(task)
             
             prompt_text = f"""
@@ -1241,15 +1249,18 @@ User Query: {user_query}
 Available Tasks:
 {json.dumps(formatted_tasks, indent=2)}
 
+Completed Tasks ({len(completed_tasks)} total):
+{json.dumps(completed_tasks, indent=2)}
+
 Historical Feedback:
 Action Outcomes: {json.dumps(feedback_data.get('action_outcomes', []), indent=2)}
 Success Patterns: {json.dumps(feedback_data.get('success_patterns', {}), indent=2)}
 Temporal Analysis: {json.dumps(feedback_data.get('temporal_analysis', {}), indent=2)}
 
-Please analyze the above context, including available tasks, historical feedback, and patterns, to suggest next best actions.
+Please analyze the above context, including available tasks, completed tasks, historical feedback, and patterns, to suggest next best actions.
 Consider:
 1. Available tasks and their content
-2. Past successful task completions
+2. Past successful task completions (see Completed Tasks section)
 3. Temporal patterns in task success
 4. Historical action outcomes
 5. Current task priorities and dependencies
