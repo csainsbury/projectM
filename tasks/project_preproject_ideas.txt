@@ -12,7 +12,7 @@ preproject ideas: general unstructured project ideas and thoughts for later deve
 </associated label>
 
 <context>
-Ideas will be listed here with links to context as/when possible
+project management tool - kairos
 </context>
 
 <current status>

@@ -717,8 +717,11 @@ class FeedbackCollector:
             # Get user interactions
             interactions = self.user_tracker.track_interactions(suggestion_id)
             
-            # Get task history
+            # Get task history including completed tasks
             task_history = self.github_monitor.get_tasks().get("tasks", [])
+            
+            # Store completion information
+            self._store_completion_data(task_history)
             
             # Calculate comprehensive metrics
             metrics = self.calculate_outcome_metrics(task_history, interactions)
@@ -737,6 +740,30 @@ class FeedbackCollector:
         except Exception as e:
             logger.error(f"Error collecting feedback: {e}")
             return {}
+
+    def _store_completion_data(self, task_history: List[dict]) -> None:
+        """Store completion data in feedback repository"""
+        try:
+            completed_tasks = [task for task in task_history if task.get('completed_at')]
+            
+            if completed_tasks:
+                feedback_path = os.path.join('feedback', 'completed_tasks.jsonl')
+                
+                # Append new completions
+                with jsonlines.open(feedback_path, mode='a') as writer:
+                    for task in completed_tasks:
+                        writer.write({
+                            'task_id': task.get('id'),
+                            'completed_at': task.get('completed_at'),
+                            'created_at': task.get('created_at'),
+                            'priority': task.get('priority'),
+                            'type': task.get('type'),
+                            'completion_time': task.get('completed_at') - task.get('created_at')
+                        })
+                
+                logger.info(f"Stored completion data for {len(completed_tasks)} tasks")
+        except Exception as e:
+            logger.error(f"Error storing completion data: {e}")
 
     def calculate_outcome_metrics(self, task_history: List[dict], interactions: List[dict]) -> dict:
         """Calculate comprehensive outcome metrics"""
@@ -1299,49 +1326,77 @@ class TaskAnalysisService:
 
     def analyze_completion_patterns(self, task_history: List[dict]) -> dict:
         """Analyze patterns in task completion"""
-        if not task_history:
-            return {
-                'avg_completion_time_hours': None,
-                'success_rate': 0,
-                'completion_by_priority': {},
-                'completion_by_type': {},
-                'avg_dependencies': 0
+        try:
+            # Load both current and historical tasks
+            completed_tasks = []
+            
+            # Check inbox_tasks.json history from GitHub
+            try:
+                repo = Github(os.getenv('GITHUB_TOKEN')).get_repo(GITHUB_REPO)
+                commits = repo.get_commits(path='tasks/inbox_tasks.json')
+                
+                for commit in commits:
+                    file_content = repo.get_contents('tasks/inbox_tasks.json', ref=commit.sha)
+                    historical_tasks = json.loads(file_content.decoded_content.decode())
+                    
+                    # Track tasks that were in previous versions but not current
+                    if isinstance(historical_tasks, dict) and 'tasks' in historical_tasks:
+                        completed_tasks.extend([
+                            task for task in historical_tasks['tasks']
+                            if task.get('completed_at')
+                        ])
+            except Exception as e:
+                logger.error(f"Error loading task history: {e}")
+
+            # Add currently completed tasks
+            current_completed = [task for task in task_history if task.get('completed_at')]
+            completed_tasks.extend(current_completed)
+
+            # Remove duplicates based on task ID
+            seen_ids = set()
+            unique_completed = []
+            for task in completed_tasks:
+                if task.get('id') not in seen_ids:
+                    seen_ids.add(task.get('id'))
+                    unique_completed.append(task)
+
+            total_tasks = len(task_history)
+            completion_count = len(unique_completed)
+            
+            analysis = {
+                "completion_rate": completion_count / total_tasks if total_tasks > 0 else 0,
+                "completed_count": completion_count,
+                "total_count": total_tasks,
+                "avg_completion_time": self._calculate_avg_completion_time(unique_completed),
+                "completion_by_priority": self._analyze_priority_patterns(unique_completed),
+                "completion_by_type": self._analyze_type_patterns(unique_completed),
+                "dependency_impact": self._analyze_dependencies(unique_completed, task_history)
             }
 
-        completed_tasks = [t for t in task_history if t.get('completed_at')]
-        total_tasks = len(task_history)
-        
-        # Calculate metrics
+            logger.info(f"Analyzed {len(unique_completed)} completed tasks out of {total_tasks} total tasks")
+            return analysis
+
+        except Exception as e:
+            logger.error(f"Error analyzing completion patterns: {e}")
+            return {
+                "completion_rate": 0,
+                "completed_count": 0,
+                "total_count": 0,
+                "avg_completion_time": 0,
+                "completion_by_priority": {},
+                "completion_by_type": {},
+                "dependency_impact": {}
+            }
+
+    def _calculate_avg_completion_time(self, completed_tasks: List[dict]) -> float:
+        """Calculate average time to complete tasks"""
         completion_times = []
-        priorities = {}
-        types = {}
-        dependency_counts = []
-
         for task in completed_tasks:
-            # Completion time
-            if isinstance(task.get('created_at'), (int, float)) and isinstance(task.get('completed_at'), (int, float)):
-                completion_time = (task['completed_at'] - task['created_at']) / 3600.0  # Convert to hours
+            if task.get('created_at') and task.get('completed_at'):
+                completion_time = task['completed_at'] - task['created_at']
                 completion_times.append(completion_time)
-
-            # Priority statistics
-            priority = task.get('priority', 'unknown')
-            priorities[priority] = priorities.get(priority, 0) + 1
-
-            # Type statistics
-            task_type = task.get('type', 'unknown')
-            types[task_type] = types.get(task_type, 0) + 1
-
-            # Dependency statistics
-            deps = len(task.get('depends_on', []))
-            dependency_counts.append(deps)
-
-        return {
-            'avg_completion_time_hours': sum(completion_times) / len(completion_times) if completion_times else None,
-            'success_rate': len(completed_tasks) / total_tasks if total_tasks > 0 else 0,
-            'completion_by_priority': priorities,
-            'completion_by_type': types,
-            'avg_dependencies': sum(dependency_counts) / len(dependency_counts) if dependency_counts else 0
-        }
+        
+        return sum(completion_times) / len(completion_times) if completion_times else 0
 
     def calculate_velocity_impact(self, task_history: List[dict]) -> dict:
         """Calculate impact on project velocity"""
@@ -1687,14 +1742,16 @@ def initialize_system() -> 'ActionSuggestionSystem':
 def ensure_directories():
     """Ensure all required directories and files exist"""
     try:
-        # Create data directory if it doesn't exist
+        # Create directories if they don't exist
         os.makedirs('data', exist_ok=True)
+        os.makedirs('feedback', exist_ok=True)
         
         # Initialize empty files if they don't exist
         default_files = {
             'data/action_outcomes.jsonl': '',
             'data/success_patterns.json': '{}',
-            'data/temporal_analysis.json': '{}'
+            'data/temporal_analysis.json': '{}',
+            'feedback/completed_tasks.jsonl': ''
         }
         
         for filepath, default_content in default_files.items():
