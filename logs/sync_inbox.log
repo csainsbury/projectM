@@ -1782,3 +1782,43 @@
 2024-12-29 15:30:03,778 - projectM - INFO - Successfully read inbox_tasks.json
 2024-12-29 15:30:03,778 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
 2024-12-29 15:30:04,272 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-29 15:40:02,151 - projectM - INFO - Starting sync with pattern: inbox
+2024-12-29 15:40:02,556 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-29 15:40:02,557 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-29 15:40:02,557 - projectM - INFO - Syncing inbox tasks only
+2024-12-29 15:40:03,035 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-29 15:40:03,036 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-29 15:40:03,036 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-29 15:40:03,592 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-29 15:50:02,685 - projectM - INFO - Starting sync with pattern: inbox
+2024-12-29 15:50:03,064 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-29 15:50:03,064 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-29 15:50:03,064 - projectM - INFO - Syncing inbox tasks only
+2024-12-29 15:50:03,628 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-29 15:50:03,628 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-29 15:50:03,629 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-29 15:50:04,280 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-29 16:00:02,549 - projectM - INFO - Starting sync with pattern: inbox
+2024-12-29 16:00:02,982 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-29 16:00:02,983 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-29 16:00:02,983 - projectM - INFO - Syncing inbox tasks only
+2024-12-29 16:00:03,463 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-29 16:00:03,464 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-29 16:00:03,464 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-29 16:00:03,987 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-29 16:10:02,168 - projectM - INFO - Starting sync with pattern: inbox
+2024-12-29 16:10:02,569 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-29 16:10:02,569 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-29 16:10:02,570 - projectM - INFO - Syncing inbox tasks only
+2024-12-29 16:10:03,058 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-29 16:10:03,058 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-29 16:10:03,059 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-29 16:10:03,562 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-29 16:20:01,856 - projectM - INFO - Starting sync with pattern: inbox
+2024-12-29 16:20:02,170 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-29 16:20:02,170 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-29 16:20:02,171 - projectM - INFO - Syncing inbox tasks only
+2024-12-29 16:20:02,682 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-29 16:20:02,682 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-29 16:20:02,682 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-29 16:20:03,165 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
