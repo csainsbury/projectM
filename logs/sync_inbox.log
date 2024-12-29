@@ -1766,3 +1766,19 @@
 2024-12-29 15:10:02,942 - projectM - INFO - Successfully read inbox_tasks.json
 2024-12-29 15:10:02,942 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
 2024-12-29 15:10:03,452 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-29 15:20:01,913 - projectM - INFO - Starting sync with pattern: inbox
+2024-12-29 15:20:02,417 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-29 15:20:02,417 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-29 15:20:02,417 - projectM - INFO - Syncing inbox tasks only
+2024-12-29 15:20:02,882 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-29 15:20:02,882 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-29 15:20:02,882 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-29 15:20:03,402 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2024-12-29 15:30:02,953 - projectM - INFO - Starting sync with pattern: inbox
+2024-12-29 15:30:03,334 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2024-12-29 15:30:03,334 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
+2024-12-29 15:30:03,334 - projectM - INFO - Syncing inbox tasks only
+2024-12-29 15:30:03,777 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2024-12-29 15:30:03,778 - projectM - INFO - Successfully read inbox_tasks.json
+2024-12-29 15:30:03,778 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2024-12-29 15:30:04,272 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
