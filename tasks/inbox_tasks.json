@@ -13,18 +13,6 @@
       "created_at": 1725862578
     },
     {
-      "id": "8412631592",
-      "content": "email to sam neilsen [15m]",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-29",
-      "labels": [
-        "NHS_Admin",
-        "reclaim"
-      ],
-      "created_at": 1726829511
-    },
-    {
       "id": "8631073179",
       "content": "update the HIC code [240m]",
       "description": "",
@@ -101,8 +89,10 @@
       "content": "implement struan's VAE to generate synthetic cohorts with automated feature class recognition",
       "description": "",
       "priority": 4,
-      "due": "2024-12-31",
-      "labels": [],
+      "due": "2025-01-03",
+      "labels": [
+        "CAUSALFound"
+      ],
       "created_at": 1735042883
     },
     {
@@ -139,15 +129,6 @@
         "reclaim"
       ],
       "created_at": 1735397784
-    },
-    {
-      "id": "8716860796",
-      "content": "EASD membership renewal. consider/renew? [20m]",
-      "description": "",
-      "priority": 1,
-      "due": "2024-12-30",
-      "labels": [],
-      "created_at": 1735407785
     }
   ]
 }

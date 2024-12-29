@@ -742,28 +742,70 @@ class FeedbackCollector:
             return {}
 
     def _store_completion_data(self, task_history: List[dict]) -> None:
-        """Store completion data in feedback repository"""
+        """Store completion data in all relevant locations"""
         try:
-            completed_tasks = [task for task in task_history if task.get('completed_at')]
-            
-            if completed_tasks:
-                feedback_path = os.path.join('feedback', 'completed_tasks.jsonl')
-                
-                # Append new completions
-                with jsonlines.open(feedback_path, mode='a') as writer:
-                    for task in completed_tasks:
-                        writer.write({
-                            'task_id': task.get('id'),
-                            'completed_at': task.get('completed_at'),
-                            'created_at': task.get('created_at'),
-                            'priority': task.get('priority'),
-                            'type': task.get('type'),
-                            'completion_time': task.get('completed_at') - task.get('created_at')
-                        })
-                
-                logger.info(f"Stored completion data for {len(completed_tasks)} tasks")
+            # Load completed tasks from tasks directory
+            completed_tasks = []
+            completed_file = os.path.join('tasks', 'completed_tasks.json')
+            if os.path.exists(completed_file):
+                with open(completed_file, 'r') as f:
+                    completed_tasks = json.load(f)
+
+            # Update success patterns
+            success_patterns = {
+                'completion_rate': len(completed_tasks) / len(task_history) if task_history else 0,
+                'completed_count': len(completed_tasks),
+                'last_updated': int(time.time())
+            }
+            with open('data/success_patterns.json', 'w') as f:
+                json.dump(success_patterns, f, indent=2)
+
+            # Update temporal analysis
+            temporal_analysis = {
+                'completions_by_hour': self._analyze_completions_by_hour(completed_tasks),
+                'completions_by_day': self._analyze_completions_by_day(completed_tasks),
+                'last_updated': int(time.time())
+            }
+            with open('data/temporal_analysis.json', 'w') as f:
+                json.dump(temporal_analysis, f, indent=2)
+
+            # Append to action outcomes
+            with jsonlines.open('data/action_outcomes.jsonl', mode='a') as writer:
+                for task in completed_tasks:
+                    writer.write({
+                        'task_id': task['id'],
+                        'action': 'completed',
+                        'timestamp': task['completed_at'],
+                        'metadata': {
+                            'completion_time': task['completed_at'] - task.get('created_at', task['completed_at']),
+                            'labels': task.get('labels', []),
+                            'priority': task.get('priority')
+                        }
+                    })
+
+            logger.info(f"Updated all feedback stores with {len(completed_tasks)} completed tasks")
+
         except Exception as e:
             logger.error(f"Error storing completion data: {e}")
+            raise
+
+    def _analyze_completions_by_hour(self, completed_tasks: List[dict]) -> Dict[str, int]:
+        """Analyze completions by hour of day"""
+        hour_counts = {str(i): 0 for i in range(24)}
+        for task in completed_tasks:
+            if task.get('completed_at'):
+                hour = datetime.fromtimestamp(task['completed_at']).hour
+                hour_counts[str(hour)] += 1
+        return hour_counts
+
+    def _analyze_completions_by_day(self, completed_tasks: List[dict]) -> Dict[str, int]:
+        """Analyze completions by day of week"""
+        day_counts = {str(i): 0 for i in range(7)}
+        for task in completed_tasks:
+            if task.get('completed_at'):
+                day = datetime.fromtimestamp(task['completed_at']).weekday()
+                day_counts[str(day)] += 1
+        return day_counts
 
     def calculate_outcome_metrics(self, task_history: List[dict], interactions: List[dict]) -> dict:
         """Calculate comprehensive outcome metrics"""
@@ -1221,33 +1263,29 @@ class LLMService:
         )
 
     def generate_suggestion(self, context):
-        """
-        Construct a prompt from the context, call Gemini, and return an actionable suggestion.
-        """
+        """Construct a prompt from the context, call Gemini, and return an actionable suggestion."""
         try:
+            # Get system prompt
+            system_prompt = ""
+            try:
+                with open('tasks/system_prompt.txt', 'r') as f:
+                    system_prompt = f.read().strip()
+            except Exception as e:
+                logger.error(f"Error reading system prompt: {e}")
+                system_prompt = "Follow standard task prioritization and analysis protocols."
+
             user_query = context.get("user_query", "No user query provided.")
             tasks = context.get('repo_info', {}).get('tasks', [])
-            completed_tasks = context.get('repo_info', {}).get('completed_tasks', [])  # Get completed tasks
+            completed_tasks = context.get('repo_info', {}).get('completed_tasks', [])
             feedback_data = context.get('repo_info', {}).get('feedback', {})
             
-            # Format tasks for better readability
-            formatted_tasks = []
-            for task in tasks:
-                if isinstance(task, dict):
-                    if task.get('type') == 'text':
-                        formatted_tasks.append({
-                            'id': task.get('id'),
-                            'type': 'text',
-                            'summary': task.get('content', '')[:200] + '...' if len(task.get('content', '')) > 200 else task.get('content', '')
-                        })
-                    else:
-                        formatted_tasks.append(task)
-            
-            prompt_text = f"""
+            prompt_text = f"""System Instructions:
+{system_prompt}
+
 User Query: {user_query}
 
 Available Tasks:
-{json.dumps(formatted_tasks, indent=2)}
+{json.dumps(tasks, indent=2)}
 
 Completed Tasks ({len(completed_tasks)} total):
 {json.dumps(completed_tasks, indent=2)}
@@ -1257,15 +1295,7 @@ Action Outcomes: {json.dumps(feedback_data.get('action_outcomes', []), indent=2)
 Success Patterns: {json.dumps(feedback_data.get('success_patterns', {}), indent=2)}
 Temporal Analysis: {json.dumps(feedback_data.get('temporal_analysis', {}), indent=2)}
 
-Please analyze the above context, including available tasks, completed tasks, historical feedback, and patterns, to suggest next best actions.
-Consider:
-1. Available tasks and their content
-2. Past successful task completions (see Completed Tasks section)
-3. Temporal patterns in task success
-4. Historical action outcomes
-5. Current task priorities and dependencies
-
-Provide a detailed suggestion based on this comprehensive context.
+Please respond to the user query: "{user_query}" while following the system instructions above.
 """
 
             payload = {
@@ -1866,6 +1896,15 @@ def sync_local_to_github(file_pattern='inbox'):
             files_to_sync = [f for f in os.listdir(tasks_dir) 
                            if f.endswith(('.json', '.txt'))]
             logger.info(f"Found {len(files_to_sync)} files to sync: {files_to_sync}")
+        
+        # Add feedback files to sync
+        if file_pattern == 'all':
+            files_to_sync.extend([
+                'data/action_outcomes.jsonl',
+                'data/success_patterns.json',
+                'data/temporal_analysis.json',
+                'feedback/completed_tasks.jsonl'
+            ])
         
         for filename in files_to_sync:
             max_retries = 3
