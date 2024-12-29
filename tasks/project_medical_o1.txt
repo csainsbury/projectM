@@ -1,0 +1,23 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+medical_o1: an exploration of the implementation of RL fine tuning to medical data
+</title>
+
+<associated_label>
+@medo1
+</associated_label>
+
+<context>
+medo1.py
+code_readme.md
+o1_paper_text.txt
+</context>
+
+<current_status>
+have skimmed paper and got o1 pro to generate pseudocode and a basic implementation
+the next step might be to try and run this, and then to do link to an actual LLM. at the moment there is no actual agent in the tool
+</current_status>

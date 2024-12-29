@@ -710,6 +710,14 @@ class FeedbackCollector:
         self.github_monitor = github_monitor
         self.user_tracker = user_tracker
         self.temporal_analyzer = temporal_analyzer
+        self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        self.tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
+        
+        # Update file paths
+        self.action_outcomes_file = os.path.join(self.data_dir, 'action_outcomes.jsonl')
+        self.success_patterns_file = os.path.join(self.data_dir, 'success_patterns.json')
+        self.temporal_analysis_file = os.path.join(self.data_dir, 'temporal_analysis.json')
+        self.completed_tasks_file = os.path.join(self.tasks_dir, 'completed_tasks.json')
 
     def collect_feedback(self, suggestion_id: str) -> dict:
         """Collect comprehensive feedback for a suggestion"""
@@ -1212,7 +1220,7 @@ class ContextAggregator:
         """Load action outcomes from feedback file"""
         try:
             outcomes = []
-            feedback_path = os.path.join('feedback', 'action_outcomes.jsonl')
+            feedback_path = os.path.join('data', 'action_outcomes.jsonl')
             if os.path.exists(feedback_path):
                 with jsonlines.open(feedback_path) as reader:
                     for line in reader:
@@ -1903,7 +1911,6 @@ def sync_local_to_github(file_pattern='inbox'):
                 'data/action_outcomes.jsonl',
                 'data/success_patterns.json',
                 'data/temporal_analysis.json',
-                'feedback/completed_tasks.jsonl'
             ])
         
         for filename in files_to_sync:
