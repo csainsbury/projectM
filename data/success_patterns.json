@@ -1,4 +1,5 @@
 {
-  "avg_completion_time_hours": 6.25,
-  "success_rate": 0.6666666666666666
+  "completion_rate": 0.10526315789473684,
+  "completed_count": 4,
+  "last_updated": 1735559623
 }
