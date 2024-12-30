@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include requirements.txt
+recursive-include kairos/templates *
+recursive-include kairos/static *
+recursive-include kairos/scripts * 
