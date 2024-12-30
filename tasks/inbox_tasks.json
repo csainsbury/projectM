@@ -73,18 +73,6 @@
       "created_at": 1734979250
     },
     {
-      "id": "8706649689",
-      "content": "translate TrialEmulation package into python (XV)",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-16",
-      "labels": [
-        "CAUSALFound",
-        "reclaim"
-      ],
-      "created_at": 1734979293
-    },
-    {
       "id": "8708284154",
       "content": "implement struan's VAE to generate synthetic cohorts with automated feature class recognition",
       "description": "",
