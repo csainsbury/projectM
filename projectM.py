@@ -1857,6 +1857,9 @@ def handle_query():
             suggestion = system.llm_service.generate_suggestion(context)
             logger.info("Generated suggestion successfully")
             
+            # We should add here:
+            system.feedback_collector.collect_feedback(suggestion)
+            
             return jsonify({
                 'success': True,
                 'suggestion': suggestion
@@ -1888,46 +1891,40 @@ def sync_local_to_github(file_pattern='inbox'):
         repo = github.get_repo(GITHUB_REPO)
         logger.info(f"Connected to GitHub repo: {GITHUB_REPO}")
         
-        # Get absolute path to tasks directory
-        tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
-        logger.info(f"Tasks directory: {tasks_dir}")
-        
-        if not os.path.exists(tasks_dir):
-            raise ValueError(f"Tasks directory not found: {tasks_dir}")
+        # Get absolute paths to directories
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        tasks_dir = os.path.join(base_dir, 'tasks')
+        data_dir = os.path.join(base_dir, 'data')
         
         # Determine which files to sync
         files_to_sync = []
         if file_pattern == 'inbox':
-            files_to_sync = ['inbox_tasks.json']
+            files_to_sync = [('tasks', 'inbox_tasks.json')]
             logger.info("Syncing inbox tasks only")
         else:
-            files_to_sync = [f for f in os.listdir(tasks_dir) 
+            # Add task files with their directory prefix
+            files_to_sync = [('tasks', f) for f in os.listdir(tasks_dir) 
                            if f.endswith(('.json', '.txt'))]
-            logger.info(f"Found {len(files_to_sync)} files to sync: {files_to_sync}")
+            logger.info(f"Found {len(files_to_sync)} files to sync")
         
         # Add feedback files to sync
         if file_pattern == 'all':
-            files_to_sync.extend([
-                'data/action_outcomes.jsonl',
-                'data/success_patterns.json',
-                'data/temporal_analysis.json',
-            ])
-        
-        for filename in files_to_sync:
+            data_files = [
+                ('data', 'action_outcomes.jsonl'),
+                ('data', 'success_patterns.json'),
+                ('data', 'temporal_analysis.json'),
+            ]
+            files_to_sync.extend(data_files)
+            
+        for dir_prefix, filename in files_to_sync:
             max_retries = 3
             retry_count = 0
             
             while retry_count < max_retries:
                 try:
-                    # Check rate limit before each operation
-                    rate_limit = github.get_rate_limit()
-                    if rate_limit.core.remaining < 2:
-                        wait_time = (rate_limit.core.reset - datetime.now()).seconds + 60
-                        logger.info(f"Rate limit reached. Waiting {wait_time} seconds...")
-                        sleep(wait_time)
-                    
-                    # Read local file
-                    file_path = os.path.join(tasks_dir, filename)
+                    # Determine correct local directory
+                    local_dir = data_dir if dir_prefix == 'data' else tasks_dir
+                    file_path = os.path.join(local_dir, filename)
                     logger.info(f"Reading local file: {file_path}")
                     
                     if not os.path.exists(file_path):
@@ -1950,7 +1947,7 @@ def sync_local_to_github(file_pattern='inbox'):
                     logger.info(f"Successfully read {filename}")
                     
                     # Try to get existing file from GitHub
-                    github_path = f"tasks/{filename}"
+                    github_path = f"{dir_prefix}/{filename}"
                     logger.info(f"Checking for existing file in GitHub: {github_path}")
                     
                     try:
@@ -2086,7 +2083,7 @@ def upload_file():
             'error': str(e)
         }), 500
 
-if __name__ == "__main__":
+def main():
     try:
         print("Initializing ProjectM system...")
         ensure_directories()
@@ -2095,9 +2092,24 @@ if __name__ == "__main__":
         system = initialize_system()
         print("System initialized successfully")
         
+        # Add periodic feedback updates
+        def update_feedback_job():
+            try:
+                system.update_feedback()
+            except Exception as e:
+                logger.error(f"Error in feedback update job: {e}")
+        
+        # Schedule feedback updates (every hour)
+        from apscheduler.schedulers.background import BackgroundScheduler
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(update_feedback_job, 'interval', hours=1)
+        scheduler.start()
+        
         print("Starting ProjectM server...")
-        # Run the Flask app with debug mode and allow all hosts
         app.run(debug=True, host='0.0.0.0', port=5001)
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()
