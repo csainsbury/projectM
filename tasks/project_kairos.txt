@@ -12,6 +12,8 @@ kairos: project management tool
 </associated_label>
 
 <context>
+kairos_technical_documentation_271224.txt
+kairos_technical_documentation_271224.txt
 </context>
 
 <current_status>
