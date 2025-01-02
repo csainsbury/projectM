@@ -24,6 +24,7 @@ functionally I have divided this project up into the following sections:
 1. combination generation: this is underway. I have written code that will generate all possible combinations of a number of continuous and categorical features. some additional work required to work out how to summarise past medication history etc
 2. synthetic data generation: the VAE method is complete. Struan is writing up at present, with a draft now available - summarised in vae_method.txt. we need to implement CTGAN and a diffusion method (being implemented by Rob Nagy).
 3. TTE: Xander is working on translating the TrialEmulation R package into python
+- 020125 XV making progess with this.
 4. manifold: not yet started
 5. Foundation Model training: not yet started
 Overall -> start building pipeline linking steps: not yet started
