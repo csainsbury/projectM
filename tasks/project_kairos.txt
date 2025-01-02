@@ -1,0 +1,22 @@
+<document_type>
+description of project, with a description of current status
+pointers to linked documents of interest
+</document_type>
+
+<title>
+kairos: project management tool
+</title>
+
+<associated_label>
+@kairos
+</associated_label>
+
+<context>
+</context>
+
+<current_status>
+- functional
+- future plans:
+to create pip installable module
+to have an empty repository version for wider use
+</current_status>
