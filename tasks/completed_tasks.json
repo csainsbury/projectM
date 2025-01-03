@@ -86,5 +86,16 @@
     "created_at": 1735745233,
     "completed_at": 1735768804,
     "completion_source": "todoist"
+  },
+  {
+    "id": "8729876029",
+    "content": "test addition of new task",
+    "description": "",
+    "priority": 1,
+    "due": "2025-01-03",
+    "labels": [],
+    "created_at": 1735849660,
+    "completed_at": 1735908003,
+    "completion_source": "todoist"
   }
 ]
