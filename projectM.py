@@ -221,63 +221,61 @@ class GitHubActivityMonitor:
         self.resource_manager = resource_manager
 
     def get_tasks(self) -> dict:
-        """Get tasks with caching"""
+        """Get all tasks from the repository"""
         try:
-            tasks_content = {
-                "tasks": [],
-                "raw_contents": {}
-            }
-
             logger.info("Starting task retrieval from GitHub")
-
-            # Get all contents from the tasks directory
-            contents = self.resource_manager.repo.get_contents("tasks")
-            logger.info(f"Found {len(contents)} files in tasks directory")
+            tasks = []
+            tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
             
-            # Process all files in the tasks directory
-            for content in contents:
+            # Get list of files, excluding directories and special files
+            files = [f for f in os.listdir(tasks_dir) 
+                    if os.path.isfile(os.path.join(tasks_dir, f)) and 
+                    not f.startswith('.') and
+                    f not in {'system_prompt.txt'} and
+                    not f.startswith('reduced_') and
+                    os.path.dirname(f) != 'uncompressed_context']
+            
+            logger.info(f"Found {len(files)} files in tasks directory")
+            
+            for filename in files:
                 try:
-                    logger.info(f"Processing file: {content.path}")
-                    file_content = content.decoded_content.decode()
+                    file_path = os.path.join(tasks_dir, filename)
+                    logger.info(f"Processing file: {filename}")
                     
-                    # Handle JSON files
-                    if content.path.endswith('.json'):
-                        logger.info(f"Processing JSON file: {content.path}")
-                        parsed = json.loads(file_content)
-                        if isinstance(parsed, dict) and "tasks" in parsed:
-                            tasks_content["tasks"].extend(parsed["tasks"])
-                            logger.info(f"Added {len(parsed['tasks'])} tasks from {content.path}")
-                        elif isinstance(parsed, list):
-                            tasks_content["tasks"].extend(parsed)
-                            logger.info(f"Added {len(parsed)} tasks from {content.path}")
+                    if filename.endswith('.json'):
+                        logger.info(f"Processing JSON file: {filename}")
+                        with open(file_path, 'r') as f:
+                            json_data = json.load(f)
+                            if isinstance(json_data, list):
+                                tasks.extend(json_data)
+                                logger.info(f"Added {len(json_data)} tasks from {filename}")
                     
-                    # Handle TXT files
-                    elif content.path.endswith('.txt'):
-                        logger.info(f"Processing TXT file: {content.path}")
-                        # Add text files as tasks with their content
-                        task = {
-                            "id": os.path.splitext(os.path.basename(content.path))[0],
-                            "type": "text",
-                            "content": file_content,
-                            "created_at": content.last_modified,
-                            "filename": content.path
-                        }
-                        tasks_content["tasks"].append(task)
-                        logger.info(f"Added text task from {content.path}")
-                    
-                    tasks_content["raw_contents"][content.path] = file_content
-                    
+                    elif filename.endswith('.txt'):
+                        logger.info(f"Processing TXT file: {filename}")
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            tasks.append({
+                                'id': os.path.splitext(filename)[0],
+                                'type': 'text',
+                                'content': content,
+                                'created_at': datetime.now().strftime('%c'),
+                                'filename': file_path
+                            })
+                            logger.info(f"Added text task from {filename}")
+                            
                 except Exception as e:
-                    logger.error(f"Error processing {content.path}: {e}")
+                    logger.error(f"Error processing {file_path}: {e}")
                     continue
-
-            logger.info(f"Found {len(tasks_content['tasks'])} total tasks")
-            logger.info(f"Task content sample: {str(tasks_content['tasks'][:1])}")
-            return tasks_content
+            
+            logger.info(f"Found {len(tasks)} total tasks")
+            if tasks:
+                logger.info(f"Task content sample: {tasks[:1]}")
+            
+            return {"tasks": tasks}
             
         except Exception as e:
-            logger.error(f"Error getting tasks: {e}")
-            raise
+            logger.error(f"Error retrieving tasks: {e}")
+            return {"tasks": []}
 
     def track_related_activity(self, task_id, timeframe):
         """
@@ -1660,11 +1658,12 @@ If the content was truncated, please add: '[Content truncated for length]'
             return file_path  # Return original if compression fails
 
 def ensure_directories():
-    """Create necessary directories if they don't exist"""
+    """Create necessary directories and files"""
+    # Create directories
     directories = [
         'tasks',
         'tasks/reduced_context',
-        'tasks/uncompressed_context',  # Add uncompressed directory
+        'tasks/uncompressed_context',
         'data',
         'feedback',
         'templates'
@@ -1673,6 +1672,47 @@ def ensure_directories():
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
         logger.info(f"Ensured directory exists: {directory}")
+    
+    # Ensure system prompt exists
+    ensure_system_prompt()
+    
+    # Ensure JSON files exist
+    json_files = {
+        'tasks/completed_tasks.json': '[]',
+        'tasks/inbox_tasks.json': '[]',
+        'data/success_patterns.json': '{}',
+        'data/temporal_analysis.json': '{}'
+    }
+    
+    for file_path, default_content in json_files.items():
+        if not os.path.exists(file_path):
+            with open(file_path, 'w') as f:
+                f.write(default_content)
+            logger.info(f"Created default {file_path}")
+
+def ensure_system_prompt():
+    """Ensure system_prompt.txt exists with default content"""
+    system_prompt_path = os.path.join('tasks', 'system_prompt.txt')
+    if not os.path.exists(system_prompt_path):
+        default_prompt = """You are an AI assistant helping to manage tasks and projects. When providing suggestions:
+
+1. Always consider the user's character description and preferences
+2. Break down large tasks into smaller, manageable steps
+3. Prioritize administrative tasks that might be procrastinated
+4. Provide clear, actionable next steps
+5. Include specific timeframes and deadlines
+6. Consider the optimal time of day for different task types
+7. Balance technical work with administrative requirements
+
+Remember to:
+- Be proactive about administrative tasks
+- Encourage regular breaks and task switching
+- Provide structure and clear workflows
+- Help maintain momentum across multiple projects"""
+
+        with open(system_prompt_path, 'w') as f:
+            f.write(default_prompt)
+        logger.info("Created default system_prompt.txt")
 
 @app.route('/api/project/<project_name>', methods=['GET', 'POST'])
 def handle_project(project_name):

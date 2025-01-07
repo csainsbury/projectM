@@ -5151,3 +5151,6 @@ Traceback (most recent call last):
     >>>>>>> 24dd75b
              ^
 SyntaxError: invalid decimal literal
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ImportError: cannot import name 'sync_local_to_github' from 'projectM' (/Users/csainsbury/Documents/projectM/projectM.py)
