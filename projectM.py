@@ -76,7 +76,10 @@ GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 if not GITHUB_TOKEN:
     raise ValueError("GITHUB_TOKEN environment variable is not set")
 
-GITHUB_REPO = "csainsbury/projectM"  # e.g. "username/project-repo"
+GITHUB_REPO = os.getenv('GITHUB_REPO')
+if not GITHUB_REPO:
+    raise ValueError("GITHUB_REPO environment variable is not set")
+
 TASKS_PATH = "tasks"
 FEEDBACK_DIR = "feedback"
 
@@ -1321,6 +1324,49 @@ class ContextAggregator:
 
 
 # ---------------------------------------------------------------------------
+# CLASS: GeminiRateLimiter
+# ---------------------------------------------------------------------------
+class GeminiRateLimiter:
+    """Rate limiter for Gemini API calls"""
+    def __init__(self):
+        self.calls = []
+        self.max_calls_per_minute = 60  # Adjust based on your API tier
+        self.max_concurrent = 3
+        self.current_concurrent = 0
+        self._lock = threading.Lock()
+
+    def can_make_request(self) -> bool:
+        """Check if we can make a request based on rate limits"""
+        now = time.time()
+        
+        # Clean up old calls
+        self.calls = [t for t in self.calls if now - t < 60]
+        
+        with self._lock:
+            if (len(self.calls) >= self.max_calls_per_minute or 
+                self.current_concurrent >= self.max_concurrent):
+                return False
+            
+            # Add this call
+            self.calls.append(now)
+            self.current_concurrent += 1
+            return True
+
+    def release_request(self):
+        """Release a concurrent request slot"""
+        with self._lock:
+            self.current_concurrent = max(0, self.current_concurrent - 1)
+
+    def wait_for_capacity(self, timeout: int = 30) -> bool:
+        """Wait until capacity is available"""
+        start = time.time()
+        while time.time() - start < timeout:
+            if self.can_make_request():
+                return True
+            time.sleep(1)
+        return False
+
+# ---------------------------------------------------------------------------
 # CLASS: LLMService (Gemini integration)
 # ---------------------------------------------------------------------------
 class LLMService:
@@ -1911,17 +1957,29 @@ def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
 # ---------------------------------------------------------------------------
 # Main initialization
 # ---------------------------------------------------------------------------
-def initialize_system() -> 'ActionSuggestionSystem':
+def initialize_system():
     """Initialize the system once at startup"""
     global system
     if system is None:
         try:
-            # Initialize components
-            github_monitor = GitHubActivityMonitor()
+            # Initialize GitHub components first
+            github_token = os.getenv('GITHUB_TOKEN')
+            github_repo = os.getenv('GITHUB_REPO')
+            
+            if not github_token or not github_repo:
+                logger.warning("GitHub credentials not found in environment variables")
+                github_token = 'YOUR_TOKEN_HERE'
+                github_repo = 'YOUR_REPO_HERE'
+            
+            # Create resource manager and GitHub monitor
+            resource_manager = GitHubResourceManager(github_token, github_repo)
+            github_monitor = GitHubActivityMonitor(resource_manager)
+            
+            # Initialize other components
             user_tracker = UserInteractionTracker()
             temporal_analyzer = TemporalAnalysis()
             task_analyzer = TaskAnalysisService()
-            feedback_repo = FeedbackRepository()
+            feedback_repo = FeedbackRepository(github_token, github_repo)
             
             # Initialize LLM service
             llm_service = LLMService()
@@ -1994,12 +2052,24 @@ def initialize_system():
     global system
     if system is None:
         try:
-            # Initialize components
-            github_monitor = GitHubActivityMonitor()
+            # Initialize GitHub components first
+            github_token = os.getenv('GITHUB_TOKEN')
+            github_repo = os.getenv('GITHUB_REPO')
+            
+            if not github_token or not github_repo:
+                logger.warning("GitHub credentials not found in environment variables")
+                github_token = 'YOUR_TOKEN_HERE'
+                github_repo = 'YOUR_REPO_HERE'
+            
+            # Create resource manager and GitHub monitor
+            resource_manager = GitHubResourceManager(github_token, github_repo)
+            github_monitor = GitHubActivityMonitor(resource_manager)
+            
+            # Initialize other components
             user_tracker = UserInteractionTracker()
             temporal_analyzer = TemporalAnalysis()
             task_analyzer = TaskAnalysisService()
-            feedback_repo = FeedbackRepository()
+            feedback_repo = FeedbackRepository(github_token, github_repo)
             
             # Initialize LLM service
             llm_service = LLMService()

@@ -9365,3 +9365,19 @@ SyntaxError: expected 'except' or 'finally' block
 2025-01-07 20:10:03,279 - projectM - INFO - Successfully read inbox_tasks.json
 2025-01-07 20:10:03,279 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
 2025-01-07 20:10:03,800 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2025-01-07 20:20:02,790 - projectM - INFO - Starting sync with pattern: inbox
+2025-01-07 20:20:03,258 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2025-01-07 20:20:03,259 - projectM - INFO - Syncing inbox tasks only
+2025-01-07 20:20:03,259 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2025-01-07 20:20:03,260 - projectM - INFO - Successfully read inbox_tasks.json
+2025-01-07 20:20:03,260 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2025-01-07 20:20:03,797 - projectM - INFO - Changes detected, updating tasks/inbox_tasks.json
+2025-01-07 20:20:04,480 - projectM - INFO - Successfully updated inbox_tasks.json in GitHub
+2025-01-07 20:20:04,480 - projectM - INFO - Sync complete for inbox_tasks.json
+2025-01-07 20:30:01,868 - projectM - INFO - Starting sync with pattern: inbox
+2025-01-07 20:30:02,178 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2025-01-07 20:30:02,179 - projectM - INFO - Syncing inbox tasks only
+2025-01-07 20:30:02,179 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2025-01-07 20:30:02,180 - projectM - INFO - Successfully read inbox_tasks.json
+2025-01-07 20:30:02,180 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2025-01-07 20:30:02,704 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
