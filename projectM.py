@@ -1130,115 +1130,6 @@ class FeedbackCollector:
             if rec_key not in seen:
                 target.append(rec)
 
-<<<<<<< HEAD
-    def _calculate_avg_completion_time(self, completed_tasks: List[dict]) -> float:
-        """Calculate average completion time for tasks"""
-        completion_times = []
-        for task in completed_tasks:
-            if task.get('created_at') and task.get('completed_at'):
-                completion_time = task['completed_at'] - task['created_at']
-                completion_times.append(completion_time)
-        return sum(completion_times) / len(completion_times) if completion_times else 0
-
-    def _calculate_response_times(self, interactions: List[dict]) -> Dict[str, float]:
-        """Calculate average response times for different interaction types"""
-        response_times = {'suggestions': [], 'modifications': [], 'completions': []}
-        for interaction in interactions:
-            interaction_type = interaction.get('type')
-            if interaction_type and interaction.get('timestamp') and interaction.get('created_at'):
-                response_time = interaction['timestamp'] - interaction['created_at']
-                if interaction_type in response_times:
-                    response_times[interaction_type].append(response_time)
-        
-        return {
-            k: sum(v) / len(v) if v else 0 
-            for k, v in response_times.items()
-        }
-
-    def _correlate_interactions_with_success(self, tasks: List[dict], interactions: List[dict]) -> Dict[str, float]:
-        """Analyze correlation between interactions and task success"""
-        return {
-            'suggestion_acceptance_rate': self._calculate_acceptance_rate(interactions),
-            'modification_success_rate': self._calculate_modification_success(tasks, interactions),
-            'completion_correlation': self._calculate_completion_correlation(tasks, interactions)
-        }
-
-    def _analyze_completion_trends(self, tasks: List[dict]) -> Dict[str, Any]:
-        """Analyze trends in task completion patterns"""
-        return {
-            'daily_completion_trend': self._analyze_daily_trend(tasks),
-            'weekly_completion_trend': self._analyze_weekly_trend(tasks),
-            'priority_completion_trend': self._analyze_priority_trend(tasks)
-        }
-
-    def _analyze_timing_success(self, tasks: List[dict], interactions: List[dict]) -> Dict[str, Any]:
-        """Analyze timing patterns in successful outcomes"""
-        return {
-            'optimal_hours': self._identify_optimal_hours(tasks),
-            'successful_intervals': self._identify_successful_intervals(tasks),
-            'interaction_timing': self._analyze_interaction_timing(interactions)
-        }
-
-    def _analyze_failed_interactions(self, interactions: List[dict]) -> Dict[str, Any]:
-        """Analyze patterns in failed interactions"""
-        return {
-            'rejection_patterns': self._analyze_rejections(interactions),
-            'modification_patterns': self._analyze_modifications(interactions),
-            'timing_failures': self._analyze_timing_failures(interactions)
-        }
-
-    def _generate_interaction_recommendations(self, interactions: List[dict]) -> List[dict]:
-        """Generate recommendations based on interaction analysis"""
-        recommendations = []
-        
-        # Analyze timing patterns
-        optimal_times = self._identify_optimal_hours(interactions)
-        if optimal_times:
-            recommendations.append({
-                'type': 'timing',
-                'recommendation': f'Consider scheduling tasks during optimal hours: {optimal_times}',
-                'confidence': 0.8
-            })
-        
-        # Analyze success patterns
-        success_patterns = self._analyze_successful_interactions(interactions)
-        if success_patterns:
-            recommendations.append({
-                'type': 'pattern',
-                'recommendation': 'Follow successful interaction patterns',
-                'patterns': success_patterns,
-                'confidence': 0.7
-            })
-        
-        return recommendations
-
-    # Helper methods for the above functions
-    def _calculate_acceptance_rate(self, interactions: List[dict]) -> float:
-        """Calculate suggestion acceptance rate"""
-        if not interactions:
-            return 0.0
-        accepted = sum(1 for i in interactions if i.get('accepted', False))
-        return accepted / len(interactions)
-
-    def _identify_optimal_hours(self, data: List[dict]) -> List[int]:
-        """Identify hours with highest success rates"""
-        hour_success = {}
-        for item in data:
-            if item.get('timestamp'):
-                hour = datetime.fromtimestamp(item['timestamp']).hour
-                success = item.get('success', False)
-                if hour not in hour_success:
-                    hour_success[hour] = {'success': 0, 'total': 0}
-                hour_success[hour]['total'] += 1
-                if success:
-                    hour_success[hour]['success'] += 1
-        
-        # Return hours with >50% success rate
-        return [
-            hour for hour, stats in hour_success.items()
-            if stats['total'] > 0 and (stats['success'] / stats['total']) > 0.5
-        ]
-=======
     def _calculate_completion_time(self, suggestion_id: str, task_history: List[dict]) -> float:
         """Calculate time taken to complete a task from suggestion to completion"""
         try:
@@ -1267,7 +1158,6 @@ class FeedbackCollector:
         except Exception as e:
             logger.error(f"Error calculating completion time: {e}")
             return 0.0
->>>>>>> 24dd75b
 
 
 # ---------------------------------------------------------------------------
