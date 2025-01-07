@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 2024-12-27 19:45:02,489 - projectM - INFO - Starting sync with pattern: inbox
 2024-12-27 19:45:02,803 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
 2024-12-27 19:45:02,803 - projectM - INFO - Tasks directory: /Users/csainsbury/Documents/projectM/tasks
@@ -5110,3 +5111,43 @@
 2025-01-02 14:50:02,937 - projectM - INFO - Successfully read inbox_tasks.json
 2025-01-02 14:50:02,937 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
 2025-01-02 14:50:03,471 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+=======
+2025-01-07 20:40:03,054 - projectM - INFO - Starting sync with pattern: inbox
+2025-01-07 20:40:03,495 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2025-01-07 20:40:03,495 - projectM - INFO - Syncing inbox tasks only
+2025-01-07 20:40:03,495 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2025-01-07 20:40:03,496 - projectM - INFO - Successfully read inbox_tasks.json
+2025-01-07 20:40:03,497 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2025-01-07 20:40:03,984 - projectM - INFO - Changes detected, updating tasks/inbox_tasks.json
+2025-01-07 20:40:04,771 - projectM - INFO - Successfully updated inbox_tasks.json in GitHub
+2025-01-07 20:40:04,771 - projectM - INFO - Sync complete for inbox_tasks.json
+2025-01-07 21:20:02,379 - projectM - INFO - Starting sync with pattern: inbox
+2025-01-07 21:20:02,814 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2025-01-07 21:20:02,815 - projectM - INFO - Syncing inbox tasks only
+2025-01-07 21:20:02,815 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2025-01-07 21:20:02,816 - projectM - INFO - Successfully read inbox_tasks.json
+2025-01-07 21:20:02,816 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2025-01-07 21:20:03,338 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+2025-01-07 21:30:02,476 - projectM - INFO - Starting sync with pattern: inbox
+2025-01-07 21:30:02,910 - projectM - INFO - Connected to GitHub repo: csainsbury/projectM
+2025-01-07 21:30:02,911 - projectM - INFO - Syncing inbox tasks only
+2025-01-07 21:30:02,911 - projectM - INFO - Reading local file: /Users/csainsbury/Documents/projectM/tasks/inbox_tasks.json
+2025-01-07 21:30:02,912 - projectM - INFO - Successfully read inbox_tasks.json
+2025-01-07 21:30:02,912 - projectM - INFO - Checking for existing file in GitHub: tasks/inbox_tasks.json
+2025-01-07 21:30:03,491 - projectM - INFO - No changes detected for inbox_tasks.json, skipping update
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ImportError: cannot import name 'sync_local_to_github' from 'projectM' (/Users/csainsbury/Documents/projectM/projectM.py)
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ImportError: cannot import name 'sync_local_to_github' from 'projectM' (/Users/csainsbury/Documents/projectM/projectM.py)
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ImportError: cannot import name 'sync_local_to_github' from 'projectM' (/Users/csainsbury/Documents/projectM/projectM.py)
+>>>>>>> 24dd75b
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/Users/csainsbury/Documents/projectM/projectM.py", line 1270
+    >>>>>>> 24dd75b
+             ^
+SyntaxError: invalid decimal literal

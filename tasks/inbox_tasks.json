@@ -1,35 +1,11 @@
 {
   "tasks": [
     {
-      "id": "8374260443",
-      "content": "Send Greg EASD form [30min]",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-08",
-      "labels": [
-        "NHS_Admin",
-        "reclaim"
-      ],
-      "created_at": 1725862578
-    },
-    {
-      "id": "8631096705",
-      "content": "send NWLondon form back to Kavitha [30m]",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-04",
-      "labels": [
-        "NWLondon_data",
-        "reclaim"
-      ],
-      "created_at": 1732799621
-    },
-    {
       "id": "8706395925",
       "content": "draft LPAC form for PRESIDE [120m]",
       "description": "",
       "priority": 1,
-      "due": "2025-01-04",
+      "due": "2025-01-10",
       "labels": [
         "PRESIDE",
         "reclaim"
@@ -49,45 +25,22 @@
       "created_at": 1734979222
     },
     {
-      "id": "8706648272",
-      "content": "implement diffusion method for causalfound",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-16",
-      "labels": [
-        "CAUSALFound",
-        "reclaim"
-      ],
-      "created_at": 1734979250
-    },
-    {
       "id": "8708284154",
       "content": "implement struan's VAE to generate synthetic cohorts with automated feature class recognition",
       "description": "",
       "priority": 4,
-      "due": "2025-01-03",
+      "due": "2025-01-17",
       "labels": [
         "CAUSALFound"
       ],
       "created_at": 1735042883
     },
     {
-      "id": "8716547699",
-      "content": "send tax forms [60m] @admin",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-03",
-      "labels": [
-        "reclaim"
-      ],
-      "created_at": 1735397652
-    },
-    {
       "id": "8716549219",
       "content": "review CXR paper from greta [60m]",
       "description": "",
       "priority": 1,
-      "due": "2025-01-05",
+      "due": "2025-01-10",
       "labels": [
         "VisC",
         "reclaim"
@@ -95,16 +48,38 @@
       "created_at": 1735397704
     },
     {
-      "id": "8716551527",
-      "content": "reply to steven bham re eye codes [30m]",
+      "id": "8742418534",
+      "content": "generate end to end examples of data from input -> base models -> metamodels -> calibration [360m]",
       "description": "",
       "priority": 1,
-      "due": "2025-01-05",
+      "due": "2025-01-16",
       "labels": [
-        "bham_retina",
+        "MWDH_Metamodels",
         "reclaim"
       ],
-      "created_at": 1735397784
+      "created_at": 1736186560
+    },
+    {
+      "id": "8744873088",
+      "content": "Fwd: ATTD 2025 - Invitation to Upload your e-Poster",
+      "description": "",
+      "priority": 1,
+      "due": "2025-02-26",
+      "labels": [
+        "reclaim"
+      ],
+      "created_at": 1736245582
+    },
+    {
+      "id": "8746324660",
+      "content": "Fwd: ACTION REQUESTED: IUK Precision Meeting Internal Steering Meeting Thursday 16th Jan 2025",
+      "description": "",
+      "priority": 1,
+      "due": null,
+      "labels": [
+        "reclaim"
+      ],
+      "created_at": 1736268278
     }
   ]
 }

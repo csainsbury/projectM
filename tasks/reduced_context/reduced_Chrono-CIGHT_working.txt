@@ -1,0 +1,24 @@
+Okay, here's a summary of the document, addressing your request for a concise, technically accurate version:
+
+**Main Answer:**
+
+The "Chrono-CIGHT" project aims to develop a time-aware foundation model for analyzing longitudinal retinal images and linked Electronic Health Record (EHR) data from people with diabetes, improving prediction of diabetes-related complications. This involves using a transformer architecture trained on data from NHS Tayside & Fife and NHS Greater Glasgow & Clyde, validated with NHS Grampian. The model will incorporate temporal changes in retinal images and EHR data. Key objectives include: building the time-aware model, validating it to predict relevant outcomes, exploring model explainability, piloting its implementation within SCI-Diabetes and assessing stakeholder acceptability. The project will use a masked autoencoding approach and a temporal ordering pretext task to learn patterns of disease progression.
+
+**Justification in Bullet Points:**
+
+*   **Project Goal:** The project addresses the limitations of existing models trained on single time point data by incorporating time-series data, aiming for enhanced predictive accuracy of diabetes complications.
+*   **Data Sources:** The project leverages a large dataset of retinal images from 2006 onwards and linked data in SCI-Diabetes and other NHS systems. The current dataset includes c.900,000 images, with a plan to add more.
+*   **Methodology:** The core method is building a time-aware foundation model based on a transformer architecture, taking time-stamped retinal images and EHR data as input.
+*   **Validation:** The model's effectiveness will be evaluated by fine-tuning it to predict specific outcomes like glycaemic control, microvascular complications, and mortality, with external validation in NHS Grampian.
+*   **Explainability:** The project includes investigating model interpretability through SHAP and other methods to understand the key features and image areas that drive predictions.
+*   **Implementation and Acceptance:** The project includes piloting technical infrastructure for model implementation within SCI Diabetes and assessing stakeholders' perceptions of AI in diabetes care.
+*  **Technical Details** The model will use masked autoencoding and temporal ordering pretext tasks to capture spatial and temporal patterns in retinal changes. A temporal transformer will be used with positional encodings.
+*   **Action Items:** The main action items involve: combining image datasets, self-supervised pretraining, designing the temporal transformer, validating the model across multiple health boards, exploring model explainability and piloting the technical infrastructure.
+* **Optimal Time Block:** This task is best suited to your current unknown optimal time block (unknown:00) as it does not require specific time-related resources.
+* **Completion Patterns:** You have no current completion patterns, this is an ideal task to start building these.
+
+**Additional Task Suggestion:**
+
+*   Given the focus on model explainability, you could also consider researching SHAP (Shapley Additive Explanations) and other model explanation methods. This would prepare you for understanding and applying those techniques as the project develops. This should be added as a task called "Research SHAP methods for model explainability."
+    * **Rationale:** Enhances your understanding of the model's inner workings and will improve any work you do in that area when the time comes.
+    * This task can be completed in a 1-2 hour time block, aligning with your historical data.
