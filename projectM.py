@@ -43,6 +43,9 @@ from flask_cors import CORS
 from time import sleep
 from github import RateLimitExceededException
 from werkzeug.utils import secure_filename
+import threading
+import hashlib
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # Configure logging
 logging.basicConfig(
@@ -1078,6 +1081,35 @@ class FeedbackCollector:
             if rec_key not in seen:
                 target.append(rec)
 
+    def _calculate_completion_time(self, suggestion_id: str, task_history: List[dict]) -> float:
+        """Calculate time taken to complete a task from suggestion to completion"""
+        try:
+            # Find the task in history
+            task = next((t for t in task_history if t.get('suggestion_id') == suggestion_id), None)
+            if not task:
+                return 0.0
+                
+            # Get timestamps
+            suggested_at = task.get('suggested_at')
+            completed_at = task.get('completed_at')
+            
+            if not suggested_at or not completed_at:
+                return 0.0
+                
+            # Convert to datetime objects
+            suggested_time = datetime.fromtimestamp(suggested_at)
+            completed_time = datetime.fromtimestamp(completed_at)
+            
+            # Calculate hours difference
+            time_diff = completed_time - suggested_time
+            hours_taken = time_diff.total_seconds() / 3600
+            
+            return hours_taken
+            
+        except Exception as e:
+            logger.error(f"Error calculating completion time: {e}")
+            return 0.0
+
 
 # ---------------------------------------------------------------------------
 # CLASS: FeedbackRepository
@@ -1295,80 +1327,73 @@ class LLMService:
     """
     Sends prompts to Google's Gemini model, retrieves suggestions, and parses them.
     """
-
+    
     def __init__(self, api_key=os.getenv('GOOGLE_API_KEY')):
         self.api_key = api_key
         self.gemini_endpoint = (
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key="
             + self.api_key
         )
-
-    def generate_suggestion(self, context):
-        """Construct a prompt from the context, call Gemini, and return an actionable suggestion."""
-        try:
-            # Get system prompt
-            system_prompt = ""
-            try:
-                with open('tasks/system_prompt.txt', 'r') as f:
-                    system_prompt = f.read().strip()
-            except Exception as e:
-                logger.error(f"Error reading system prompt: {e}")
-                system_prompt = "Follow standard task prioritization and analysis protocols."
-
-            user_query = context.get("user_query", "No user query provided.")
-            tasks = context.get('repo_info', {}).get('tasks', [])
-            completed_tasks = context.get('repo_info', {}).get('completed_tasks', [])
-            feedback_data = context.get('repo_info', {}).get('feedback', {})
+        self.rate_limiter = GeminiRateLimiter()
+        self.cache = {}  # Simple in-memory cache
         
-            prompt_text = f"""System Instructions:
-{system_prompt}
+    def _get_cached_response(self, prompt_text: str) -> Optional[str]:
+        """Get cached response if available and not expired"""
+        cache_key = hashlib.md5(prompt_text.encode()).hexdigest()
+        cached = self.cache.get(cache_key)
+        if cached:
+            timestamp, response = cached
+            if time.time() - timestamp < 3600:  # 1 hour cache
+                return response
+        return None
 
-User Query: {user_query}
+    def _cache_response(self, prompt_text: str, response: str):
+        """Cache a response"""
+        cache_key = hashlib.md5(prompt_text.encode()).hexdigest()
+        self.cache[cache_key] = (time.time(), response)
 
-Available Tasks:
-{json.dumps(tasks, indent=2)}
+    def generate_suggestion(self, context: dict) -> str:
+        """Generate suggestion with improved context from patterns and rate limiting"""
+        try:
+            prompt_text = self._build_prompt(context)
+            
+            # Check cache first
+            cached_response = self._get_cached_response(prompt_text)
+            if cached_response:
+                return cached_response
 
-Completed Tasks ({len(completed_tasks)} total):
-{json.dumps(completed_tasks, indent=2)}
+            # Wait for rate limit capacity
+            if not self.rate_limiter.wait_for_capacity():
+                return "Error: Rate limit exceeded. Please try again later."
 
-Historical Feedback:
-Action Outcomes: {json.dumps(feedback_data.get('action_outcomes', []), indent=2)}
-Success Patterns: {json.dumps(feedback_data.get('success_patterns', {}), indent=2)}
-Temporal Analysis: {json.dumps(feedback_data.get('temporal_analysis', {}), indent=2)}
-
-Please respond to the user query: "{user_query}" while following the system instructions above.
-"""
-
-            payload = {
-                "contents": [
-                    {
-                        "parts": [
-                            {"text": prompt_text}
-                        ]
-                    }
-                ]
-            }
-
-            response = requests.post(self.gemini_endpoint, json=payload)
-            response_data = response.json()
-
-            # Extract the text from Gemini's response
-            if 'candidates' in response_data:
-                for candidate in response_data['candidates']:
-                    if 'content' in candidate:
-                        content = candidate['content']
-                        if 'parts' in content:
-                            for part in content['parts']:
-                                if 'text' in part:
-                                    return part['text']
-
-            # If we couldn't find the text in the expected structure, return the raw response
-            logger.warning("Unexpected response structure from Gemini")
-            return str(response_data)
+            try:
+                response = self._make_api_call(prompt_text)
+                self._cache_response(prompt_text, response)
+                return response
+            finally:
+                self.rate_limiter.release_request()
 
         except Exception as e:
             logger.error(f"Error generating suggestion: {e}")
             return f"Error generating suggestion: {str(e)}"
+
+    def _make_api_call(self, prompt_text: str) -> str:
+        """Make the actual API call to Gemini"""
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt_text}]
+            }]
+        }
+
+        response = requests.post(self.gemini_endpoint, json=payload)
+        
+        if response.status_code == 429:
+            logger.warning("Rate limit hit, backing off...")
+            time.sleep(5)  # Simple backoff
+            return "Rate limit reached. Please try again in a few moments."
+            
+        response_data = response.json()
+        return self._extract_response_text(response_data)
 
     # Add to LLMService class
     def _summarize_patterns(self, feedback_data: dict) -> str:
@@ -1887,35 +1912,47 @@ def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
 # Main initialization
 # ---------------------------------------------------------------------------
 def initialize_system() -> 'ActionSuggestionSystem':
-    """Initialize the complete system with all required components"""
-    try:
-        # Initialize GitHub components
-        resource_manager = GitHubResourceManager(GITHUB_TOKEN, GITHUB_REPO)
-        github_monitor = GitHubActivityMonitor(resource_manager)
-        
-        # Initialize other components
-        context_aggregator = ContextAggregator(github_monitor)
-        llm_service = LLMService()
-        feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
-        feedback_collector = FeedbackCollector(
-            github_monitor, 
-            UserInteractionTracker(), 
-            TemporalAnalysis()
-        )
-        
-        # Create and return the main system
-        return ActionSuggestionSystem(
-            llm_service=llm_service,
-            context_aggregator=context_aggregator,
-            feedback_repo=feedback_repo,
-            feedback_collector=feedback_collector,
-            task_analyzer=TaskAnalysisService(),
-            user_tracker=UserInteractionTracker(),
-            temporal_analyzer=TemporalAnalysis()
-        )
-    except Exception as e:
-        logger.error(f"Error initializing system: {e}")
-        raise
+    """Initialize the system once at startup"""
+    global system
+    if system is None:
+        try:
+            # Initialize components
+            github_monitor = GitHubActivityMonitor()
+            user_tracker = UserInteractionTracker()
+            temporal_analyzer = TemporalAnalysis()
+            task_analyzer = TaskAnalysisService()
+            feedback_repo = FeedbackRepository()
+            
+            # Initialize LLM service
+            llm_service = LLMService()
+            
+            # Initialize context aggregator
+            context_aggregator = ContextAggregator(github_monitor)
+            
+            # Initialize feedback collector
+            feedback_collector = FeedbackCollector(
+                github_monitor=github_monitor,
+                user_tracker=user_tracker,
+                temporal_analyzer=temporal_analyzer
+            )
+            
+            # Create the main system with all dependencies
+            system = ActionSuggestionSystem(
+                llm_service=llm_service,
+                context_aggregator=context_aggregator,
+                feedback_repo=feedback_repo,
+                feedback_collector=feedback_collector,
+                task_analyzer=task_analyzer,
+                user_tracker=user_tracker,
+                temporal_analyzer=temporal_analyzer
+            )
+            
+            return system
+            
+        except Exception as e:
+            logger.error(f"Error initializing system: {e}")
+            raise
+    return system
 
 
 def ensure_directories():
@@ -1950,6 +1987,50 @@ def ensure_directories():
 # ---------------------------------------------------------------------------
 app = Flask(__name__, static_folder='static')
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+system = None  # Will be initialized in main()
+
+def initialize_system():
+    """Initialize the system once at startup"""
+    global system
+    if system is None:
+        try:
+            # Initialize components
+            github_monitor = GitHubActivityMonitor()
+            user_tracker = UserInteractionTracker()
+            temporal_analyzer = TemporalAnalysis()
+            task_analyzer = TaskAnalysisService()
+            feedback_repo = FeedbackRepository()
+            
+            # Initialize LLM service
+            llm_service = LLMService()
+            
+            # Initialize context aggregator
+            context_aggregator = ContextAggregator(github_monitor)
+            
+            # Initialize feedback collector
+            feedback_collector = FeedbackCollector(
+                github_monitor=github_monitor,
+                user_tracker=user_tracker,
+                temporal_analyzer=temporal_analyzer
+            )
+            
+            # Create the main system with all dependencies
+            system = ActionSuggestionSystem(
+                llm_service=llm_service,
+                context_aggregator=context_aggregator,
+                feedback_repo=feedback_repo,
+                feedback_collector=feedback_collector,
+                task_analyzer=task_analyzer,
+                user_tracker=user_tracker,
+                temporal_analyzer=temporal_analyzer
+            )
+            
+            return system
+            
+        except Exception as e:
+            logger.error(f"Error initializing system: {e}")
+            raise
+    return system
 
 @app.route('/')
 def index():
@@ -1958,60 +2039,27 @@ def index():
 
 @app.route('/api/query', methods=['POST'])
 def handle_query():
-    """Handle API requests from the frontend"""
+    """Handle incoming queries using the global system instance"""
     try:
-        logger.info("Received query request")
-        data = request.json
-        logger.info(f"Request data: {data}")
-        
-        query = data.get('query', '')
-        
-        # Initialize system
-        try:
-            system = initialize_system()
-            logger.info("System initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize system: {e}")
+        data = request.get_json()
+        if not data or 'query' not in data:
             return jsonify({
                 'success': False,
-                'error': 'System initialization failed'
-            }), 500
+                'error': 'Missing query in request'
+            }), 400
 
-        try:
-            # Get repository contents including tasks and feedback
-            repo_contents = system.context_aggregator.github_monitor.get_tasks()
-            logger.info(f"Retrieved {len(repo_contents.get('tasks', []))} tasks from GitHub")
-            
-            # Aggregate context with feedback
-            context = system.context_aggregator.aggregate_context(query, repo_contents)
-            logger.info("Context aggregated successfully")
-            
-            # Log the context being sent to LLM
-            logger.info(f"Sending context to LLM with {len(context['repo_info']['tasks'])} tasks")
-            
-            # Generate suggestion using LLM
-            suggestion = system.llm_service.generate_suggestion(context)
-            logger.info("Generated suggestion successfully")
-            
-            # We should add here:
-            system.feedback_collector.collect_feedback(suggestion)
-            
-            return jsonify({
-                'success': True,
-                'suggestion': suggestion
-            })
-        except Exception as e:
-            logger.error(f"Error processing query: {str(e)}", exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-            
+        # Use the global system instance instead of creating a new one
+        suggestion = system.process_query(data['query'])
+        
+        return jsonify({
+            'success': True,
+            'suggestion': suggestion
+        })
     except Exception as e:
-        logger.error(f"Error handling request: {str(e)}", exc_info=True)
+        logger.error(f"Error processing query: {e}")
         return jsonify({
             'success': False,
-            'error': 'Internal server error'
+            'error': str(e)
         }), 500
 
 # Add this function to handle periodic GitHub updates
@@ -2275,7 +2323,8 @@ def main():
         print("Initializing ProjectM system...")
         ensure_directories()
         
-        # Initialize the system once at startup
+        # Initialize the global system once
+        global system
         system = initialize_system()
         print("System initialized successfully")
         
@@ -2287,7 +2336,6 @@ def main():
                 logger.error(f"Error in feedback update job: {e}")
         
         # Schedule feedback updates (every hour)
-        from apscheduler.schedulers.background import BackgroundScheduler
         scheduler = BackgroundScheduler()
         scheduler.add_job(update_feedback_job, 'interval', hours=1)
         scheduler.start()
