@@ -177,7 +177,7 @@ class GitHubActivityMonitor:
             }
 
             logger.info("Starting task retrieval from GitHub")
-            
+
             # Get all contents from the tasks directory
             contents = self.resource_manager.repo.get_contents("tasks")
             logger.info(f"Found {len(contents)} files in tasks directory")
@@ -264,7 +264,7 @@ class GitHubActivityMonitor:
 # ---------------------------------------------------------------------------
 class UserInteractionTracker:
     """Tracks and analyzes user interactions with tasks and suggestions"""
-    
+
     def __init__(self):
         self.interactions_log = []
 
@@ -705,7 +705,7 @@ class TemporalAnalysis:
 # ---------------------------------------------------------------------------
 class FeedbackCollector:
     """Collects and analyzes feedback from multiple sources"""
-    
+
     def __init__(self, github_monitor: GitHubActivityMonitor, user_tracker: UserInteractionTracker, temporal_analyzer: TemporalAnalysis):
         self.github_monitor = github_monitor
         self.user_tracker = user_tracker
@@ -719,8 +719,35 @@ class FeedbackCollector:
         self.temporal_analysis_file = os.path.join(self.data_dir, 'temporal_analysis.json')
         self.completed_tasks_file = os.path.join(self.tasks_dir, 'completed_tasks.json')
 
+    def calculate_feedback_score(self, interactions: List[dict], completion_time: float) -> float:
+        """Calculate a feedback score based on interactions and completion time"""
+        try:
+            base_score = 1.0
+            
+            # Adjust score based on completion time
+            if completion_time:
+                # Normalize completion time (e.g., if completed within 24 hours, good score)
+                time_factor = min(1.0, 24.0 / max(1.0, completion_time))
+                base_score *= (0.5 + 0.5 * time_factor)
+            
+            # Adjust for user interactions
+            for interaction in interactions:
+                action = interaction.get('action')
+                if action == 'accepted':
+                    base_score *= 1.2
+                elif action == 'rejected':
+                    base_score *= 0.8
+                elif action == 'modified':
+                    base_score *= 0.9
+            
+            return min(1.0, max(0.0, base_score))
+            
+        except Exception as e:
+            logger.error(f"Error calculating feedback score: {e}")
+            return 0.5
+
     def collect_feedback(self, suggestion_id: str) -> dict:
-        """Collect comprehensive feedback for a suggestion"""
+        """Collect comprehensive feedback with scoring"""
         try:
             # Get user interactions
             interactions = self.user_tracker.track_interactions(suggestion_id)
@@ -728,23 +755,29 @@ class FeedbackCollector:
             # Get task history including completed tasks
             task_history = self.github_monitor.get_tasks().get("tasks", [])
             
+            # Calculate completion time if task was completed
+            completion_time = self._calculate_completion_time(suggestion_id, task_history)
+            
+            # Calculate feedback score
+            feedback_score = self.calculate_feedback_score(interactions, completion_time)
+            
             # Store completion information
             self._store_completion_data(task_history)
-            
-            # Calculate comprehensive metrics
-            metrics = self.calculate_outcome_metrics(task_history, interactions)
             
             feedback_data = {
                 "suggestion_id": suggestion_id,
                 "timestamp": time.time(),
-                "user_interactions": interactions,
-                "metrics": metrics,
-                "success_indicators": self.identify_success_patterns(task_history, interactions),
-                "failure_patterns": self.identify_failure_patterns(task_history, interactions),
-                "recommendations": self.generate_recommendations(task_history, interactions)
+                "feedback_score": feedback_score,
+                "completion_time": completion_time,
+                "interactions": interactions,
+                "metrics": {
+                    "completion_count": len([t for t in task_history if t.get('completed_at')]),
+                    "total_tasks": len(task_history)
+                }
             }
             
             return feedback_data
+            
         except Exception as e:
             logger.error(f"Error collecting feedback: {e}")
             return {}
@@ -1045,114 +1078,6 @@ class FeedbackCollector:
             if rec_key not in seen:
                 target.append(rec)
 
-    def _calculate_avg_completion_time(self, completed_tasks: List[dict]) -> float:
-        """Calculate average completion time for tasks"""
-        completion_times = []
-        for task in completed_tasks:
-            if task.get('created_at') and task.get('completed_at'):
-                completion_time = task['completed_at'] - task['created_at']
-                completion_times.append(completion_time)
-        return sum(completion_times) / len(completion_times) if completion_times else 0
-
-    def _calculate_response_times(self, interactions: List[dict]) -> Dict[str, float]:
-        """Calculate average response times for different interaction types"""
-        response_times = {'suggestions': [], 'modifications': [], 'completions': []}
-        for interaction in interactions:
-            interaction_type = interaction.get('type')
-            if interaction_type and interaction.get('timestamp') and interaction.get('created_at'):
-                response_time = interaction['timestamp'] - interaction['created_at']
-                if interaction_type in response_times:
-                    response_times[interaction_type].append(response_time)
-        
-        return {
-            k: sum(v) / len(v) if v else 0 
-            for k, v in response_times.items()
-        }
-
-    def _correlate_interactions_with_success(self, tasks: List[dict], interactions: List[dict]) -> Dict[str, float]:
-        """Analyze correlation between interactions and task success"""
-        return {
-            'suggestion_acceptance_rate': self._calculate_acceptance_rate(interactions),
-            'modification_success_rate': self._calculate_modification_success(tasks, interactions),
-            'completion_correlation': self._calculate_completion_correlation(tasks, interactions)
-        }
-
-    def _analyze_completion_trends(self, tasks: List[dict]) -> Dict[str, Any]:
-        """Analyze trends in task completion patterns"""
-        return {
-            'daily_completion_trend': self._analyze_daily_trend(tasks),
-            'weekly_completion_trend': self._analyze_weekly_trend(tasks),
-            'priority_completion_trend': self._analyze_priority_trend(tasks)
-        }
-
-    def _analyze_timing_success(self, tasks: List[dict], interactions: List[dict]) -> Dict[str, Any]:
-        """Analyze timing patterns in successful outcomes"""
-        return {
-            'optimal_hours': self._identify_optimal_hours(tasks),
-            'successful_intervals': self._identify_successful_intervals(tasks),
-            'interaction_timing': self._analyze_interaction_timing(interactions)
-        }
-
-    def _analyze_failed_interactions(self, interactions: List[dict]) -> Dict[str, Any]:
-        """Analyze patterns in failed interactions"""
-        return {
-            'rejection_patterns': self._analyze_rejections(interactions),
-            'modification_patterns': self._analyze_modifications(interactions),
-            'timing_failures': self._analyze_timing_failures(interactions)
-        }
-
-    def _generate_interaction_recommendations(self, interactions: List[dict]) -> List[dict]:
-        """Generate recommendations based on interaction analysis"""
-        recommendations = []
-        
-        # Analyze timing patterns
-        optimal_times = self._identify_optimal_hours(interactions)
-        if optimal_times:
-            recommendations.append({
-                'type': 'timing',
-                'recommendation': f'Consider scheduling tasks during optimal hours: {optimal_times}',
-                'confidence': 0.8
-            })
-        
-        # Analyze success patterns
-        success_patterns = self._analyze_successful_interactions(interactions)
-        if success_patterns:
-            recommendations.append({
-                'type': 'pattern',
-                'recommendation': 'Follow successful interaction patterns',
-                'patterns': success_patterns,
-                'confidence': 0.7
-            })
-        
-        return recommendations
-
-    # Helper methods for the above functions
-    def _calculate_acceptance_rate(self, interactions: List[dict]) -> float:
-        """Calculate suggestion acceptance rate"""
-        if not interactions:
-            return 0.0
-        accepted = sum(1 for i in interactions if i.get('accepted', False))
-        return accepted / len(interactions)
-
-    def _identify_optimal_hours(self, data: List[dict]) -> List[int]:
-        """Identify hours with highest success rates"""
-        hour_success = {}
-        for item in data:
-            if item.get('timestamp'):
-                hour = datetime.fromtimestamp(item['timestamp']).hour
-                success = item.get('success', False)
-                if hour not in hour_success:
-                    hour_success[hour] = {'success': 0, 'total': 0}
-                hour_success[hour]['total'] += 1
-                if success:
-                    hour_success[hour]['success'] += 1
-        
-        # Return hours with >50% success rate
-        return [
-            hour for hour, stats in hour_success.items()
-            if stats['total'] > 0 and (stats['success'] / stats['total']) > 0.5
-        ]
-
 
 # ---------------------------------------------------------------------------
 # CLASS: FeedbackRepository
@@ -1394,7 +1319,7 @@ class LLMService:
             tasks = context.get('repo_info', {}).get('tasks', [])
             completed_tasks = context.get('repo_info', {}).get('completed_tasks', [])
             feedback_data = context.get('repo_info', {}).get('feedback', {})
-            
+        
             prompt_text = f"""System Instructions:
 {system_prompt}
 
@@ -1414,6 +1339,109 @@ Temporal Analysis: {json.dumps(feedback_data.get('temporal_analysis', {}), inden
 Please respond to the user query: "{user_query}" while following the system instructions above.
 """
 
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt_text}
+                        ]
+                    }
+                ]
+            }
+
+            response = requests.post(self.gemini_endpoint, json=payload)
+            response_data = response.json()
+
+            # Extract the text from Gemini's response
+            if 'candidates' in response_data:
+                for candidate in response_data['candidates']:
+                    if 'content' in candidate:
+                        content = candidate['content']
+                        if 'parts' in content:
+                            for part in content['parts']:
+                                if 'text' in part:
+                                    return part['text']
+
+            # If we couldn't find the text in the expected structure, return the raw response
+            logger.warning("Unexpected response structure from Gemini")
+            return str(response_data)
+
+        except Exception as e:
+            logger.error(f"Error generating suggestion: {e}")
+            return f"Error generating suggestion: {str(e)}"
+
+    # Add to LLMService class
+    def _summarize_patterns(self, feedback_data: dict) -> str:
+        """Extract and summarize key patterns from feedback data"""
+        try:
+            success_patterns = feedback_data.get('success_patterns', {})
+            temporal_data = feedback_data.get('temporal_analysis', {})
+            outcomes = feedback_data.get('action_outcomes', [])
+            
+            # Extract completion patterns
+            completion_rate = success_patterns.get('completion_rate', 0)
+            avg_completion_time = success_patterns.get('avg_completion_time', 0)
+            
+            # Get optimal times
+            optimal_hours = temporal_data.get('optimal_times', {})
+            best_hour = max(optimal_hours.items(), key=lambda x: x[1])[0] if optimal_hours else 'unknown'
+            
+            # Get common blockers
+            blockers = success_patterns.get('common_blockers', [])
+            top_blockers = blockers[:2] if blockers else ['none identified']
+            
+            # Format summary
+            summary = f"""
+Key Completion Patterns:
+- Overall completion rate: {completion_rate:.0%}
+- Average completion time: {avg_completion_time:.1f} hours
+- Most successful time block: {best_hour}:00
+- Common blockers: {', '.join(top_blockers)}
+"""
+            return summary.strip()
+        except Exception as e:
+            logger.error(f"Error summarizing patterns: {e}")
+            return "Pattern analysis unavailable"
+
+    def generate_suggestion(self, context: dict) -> str:
+        """Generate suggestion with improved context from patterns"""
+        try:
+            # Get system prompt
+            system_prompt = ""
+            try:
+                with open('tasks/system_prompt.txt', 'r') as f:
+                    system_prompt = f.read().strip()
+            except Exception as e:
+                logger.error(f"Error reading system prompt: {e}")
+                system_prompt = "Follow standard task prioritization protocols."
+
+            user_query = context.get("user_query", "No user query provided.")
+            tasks = context.get('repo_info', {}).get('tasks', [])
+            completed_tasks = context.get('repo_info', {}).get('completed_tasks', [])
+            feedback_data = context.get('repo_info', {}).get('feedback', {})
+
+            # Generate pattern summary
+            pattern_summary = self._summarize_patterns(feedback_data)
+
+            prompt_text = f"""System Instructions:
+{system_prompt}
+
+Analysis of Past Task Patterns:
+{pattern_summary}
+
+User Query: {user_query}
+
+Available Tasks:
+{json.dumps(tasks, indent=2)}
+
+Completed Tasks ({len(completed_tasks)} total):
+{json.dumps(completed_tasks, indent=2)}
+
+Please provide a suggestion that:
+1. Considers the identified completion patterns and optimal times
+2. Addresses any known blockers
+3. Responds directly to: "{user_query}"
+"""
             payload = {
                 "contents": [
                     {
@@ -1546,7 +1574,7 @@ class TaskAnalysisService:
             if task.get('created_at') and task.get('completed_at'):
                 completion_time = task['completed_at'] - task['created_at']
                 completion_times.append(completion_time)
-        
+
         return sum(completion_times) / len(completion_times) if completion_times else 0
 
     def calculate_velocity_impact(self, task_history: List[dict]) -> dict:
@@ -1560,7 +1588,7 @@ class TaskAnalysisService:
             
             # Identify bottlenecks
             bottlenecks = self._identify_bottlenecks(task_history)
-            
+
             return {
                 'completion_rate_change': completion_rates,
                 'velocity_trend': velocity_trend,
@@ -1700,7 +1728,7 @@ class TaskAnalysisService:
 # ---------------------------------------------------------------------------
 class ActionSuggestionSystem:
     """Main application class for processing user queries and updating feedback."""
-    
+
     def __init__(self,
                  llm_service: LLMService,
                  context_aggregator: ContextAggregator,
@@ -2189,6 +2217,57 @@ def upload_file():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+@app.route('/api/analysis', methods=['GET'])
+def get_analysis_report():
+    """Get comprehensive analysis of task patterns"""
+    try:
+        # Initialize system components
+        system = initialize_system()
+        
+        # Get latest tasks
+        tasks = system.context_aggregator.github_monitor.get_tasks()
+        task_list = tasks.get('tasks', [])
+        
+        # Perform analysis
+        completion_patterns = system.task_analyzer.analyze_completion_patterns(task_list)
+        temporal_patterns = system.temporal_analyzer.analyze_patterns(task_list)
+        
+        # Calculate velocity metrics
+        velocity_data = system.task_analyzer.calculate_velocity_impact(task_list)
+        
+        # Format response
+        analysis = {
+            "timestamp": time.time(),
+            "task_metrics": {
+                "total_tasks": len(task_list),
+                "completion_rate": completion_patterns.get('completion_rate', 0),
+                "avg_completion_time": completion_patterns.get('avg_completion_time', 0),
+                "recent_velocity": velocity_data.get('velocity_trend', {})
+            },
+            "temporal_insights": {
+                "optimal_hours": temporal_patterns.get('optimal_times', {}),
+                "day_patterns": temporal_patterns.get('day_patterns', {}),
+                "recent_trends": temporal_patterns.get('recent_trends', [])
+            },
+            "success_patterns": {
+                "common_blockers": completion_patterns.get('common_blockers', []),
+                "successful_labels": completion_patterns.get('successful_labels', []),
+                "completion_by_type": completion_patterns.get('completion_by_type', {})
+            }
+        }
+        
+        return jsonify({
+            "success": True,
+            "analysis": analysis
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating analysis report: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
         }), 500
 
 def main():
