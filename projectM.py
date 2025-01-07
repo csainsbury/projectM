@@ -46,6 +46,52 @@ from werkzeug.utils import secure_filename
 import threading
 import hashlib
 from apscheduler.schedulers.background import BackgroundScheduler
+from types import SimpleNamespace
+
+# After imports but before other classes
+class GeminiRateLimiter:
+    """Rate limiter for Gemini API calls"""
+    def __init__(self):
+        self.calls = []
+        self.max_calls_per_minute = 60  # Adjust based on your API tier
+        self.max_concurrent = 3
+        self.current_concurrent = 0
+        self._lock = threading.Lock()
+
+    def can_make_request(self) -> bool:
+        """Check if we can make a request based on rate limits"""
+        now = time.time()
+        
+        # Clean up old calls
+        self.calls = [t for t in self.calls if now - t < 60]
+        
+        with self._lock:
+            if (len(self.calls) >= self.max_calls_per_minute or 
+                self.current_concurrent >= self.max_concurrent):
+                return False
+            
+            # Add this call
+            self.calls.append(now)
+            self.current_concurrent += 1
+            return True
+
+    def release_request(self):
+        """Release a concurrent request slot"""
+        with self._lock:
+            self.current_concurrent = max(0, self.current_concurrent - 1)
+
+    def wait_for_capacity(self, timeout: int = 30) -> bool:
+        """Wait until capacity is available"""
+        start = time.time()
+        while time.time() - start < timeout:
+            if self.can_make_request():
+                return True
+            time.sleep(1)
+        return False
+
+# Initialize Flask app
+app = Flask(__name__, static_folder='static')
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Configure logging
 logging.basicConfig(
@@ -1242,6 +1288,7 @@ class FeedbackRepository:
 class ContextAggregator:
     def __init__(self, github_monitor: GitHubActivityMonitor):
         self.github_monitor = github_monitor
+        self.context_compressor = ContextCompressor(LLMService())
         
     def aggregate_context(self, query: str, repo_contents: dict) -> dict:
         """Aggregate context from various sources for the LLM"""
@@ -1249,35 +1296,50 @@ class ContextAggregator:
             # Get current tasks
             tasks = repo_contents.get("tasks", [])
             
-            # Load completed tasks
+            # Load completed tasks with reduced context
             completed_tasks = []
             completed_file = os.path.join('tasks', 'completed_tasks.json')
             if os.path.exists(completed_file):
                 with open(completed_file, 'r') as f:
                     completed_tasks = json.load(f)
             
-            logger.info(f"Aggregating context with {len(tasks)} current tasks and {len(completed_tasks)} completed tasks")
+            # Process any large context documents
+            processed_contents = {}
+            for path, content in repo_contents.get("raw_contents", {}).items():
+                if path.endswith('.txt') and len(content) > 4000:
+                    # Save content to temporary file
+                    temp_path = os.path.join('tasks', os.path.basename(path))
+                    with open(temp_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+                    
+                    # Get reduced version
+                    reduced_path = self.context_compressor.get_reduced_version(temp_path)
+                    
+                    # Read reduced content
+                    with open(reduced_path, 'r', encoding='utf-8') as f:
+                        processed_contents[path] = f.read()
+                    
+                    # Clean up temp file
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                else:
+                    processed_contents[path] = content
             
-            # Load feedback data
-            action_outcomes = self._load_feedback_data()
-            success_patterns = self._load_success_patterns()
-            temporal_analysis = self._load_temporal_analysis()
-            
-            # Build context dictionary with feedback and completed tasks
+            # Build context dictionary with reduced content
             context = {
                 "user_query": query,
                 "repo_info": {
                     "tasks": tasks,
-                    "completed_tasks": completed_tasks,  # Add completed tasks to context
+                    "completed_tasks": completed_tasks,
+                    "raw_contents": processed_contents,
                     "feedback": {
-                        "action_outcomes": action_outcomes,
-                        "success_patterns": success_patterns,
-                        "temporal_analysis": temporal_analysis
+                        "action_outcomes": self._load_feedback_data(),
+                        "success_patterns": self._load_success_patterns(),
+                        "temporal_analysis": self._load_temporal_analysis()
                     }
                 }
             }
             
-            logger.info(f"Context built with {len(tasks)} current tasks, {len(completed_tasks)} completed tasks, and feedback data")
             return context
             
         except Exception as e:
@@ -1324,49 +1386,6 @@ class ContextAggregator:
 
 
 # ---------------------------------------------------------------------------
-# CLASS: GeminiRateLimiter
-# ---------------------------------------------------------------------------
-class GeminiRateLimiter:
-    """Rate limiter for Gemini API calls"""
-    def __init__(self):
-        self.calls = []
-        self.max_calls_per_minute = 60  # Adjust based on your API tier
-        self.max_concurrent = 3
-        self.current_concurrent = 0
-        self._lock = threading.Lock()
-
-    def can_make_request(self) -> bool:
-        """Check if we can make a request based on rate limits"""
-        now = time.time()
-        
-        # Clean up old calls
-        self.calls = [t for t in self.calls if now - t < 60]
-        
-        with self._lock:
-            if (len(self.calls) >= self.max_calls_per_minute or 
-                self.current_concurrent >= self.max_concurrent):
-                return False
-            
-            # Add this call
-            self.calls.append(now)
-            self.current_concurrent += 1
-            return True
-
-    def release_request(self):
-        """Release a concurrent request slot"""
-        with self._lock:
-            self.current_concurrent = max(0, self.current_concurrent - 1)
-
-    def wait_for_capacity(self, timeout: int = 30) -> bool:
-        """Wait until capacity is available"""
-        start = time.time()
-        while time.time() - start < timeout:
-            if self.can_make_request():
-                return True
-            time.sleep(1)
-        return False
-
-# ---------------------------------------------------------------------------
 # CLASS: LLMService (Gemini integration)
 # ---------------------------------------------------------------------------
 class LLMService:
@@ -1399,7 +1418,7 @@ class LLMService:
         self.cache[cache_key] = (time.time(), response)
 
     def generate_suggestion(self, context: dict) -> str:
-        """Generate suggestion with improved context from patterns and rate limiting"""
+        """Generate suggestion with improved context from patterns"""
         try:
             prompt_text = self._build_prompt(context)
             
@@ -1544,733 +1563,115 @@ Please provide a suggestion that:
             logger.error(f"Error generating suggestion: {e}")
             return f"Error generating suggestion: {str(e)}"
 
-
-# ---------------------------------------------------------------------------
-# CLASS: TaskAnalysisService
-# ---------------------------------------------------------------------------
-class TaskAnalysisService:
-    """Analyzes task completion patterns and dependencies"""
+class ContextCompressor:
+    """Compresses large context documents using LLM summarization"""
     
-    def monitor_task_changes(self, previous_tasks: List[dict], current_tasks: List[dict]) -> dict:
-        """Compare task lists to identify completed and modified tasks."""
-        previous_ids = {task['id'] for task in previous_tasks}
-        current_ids = {task['id'] for task in current_tasks}
-
-        completed = previous_ids - current_ids
-        modified = []
-        downstream = []
-
-        for ctask in current_tasks:
-            # Check for modified tasks
-            for ptask in previous_tasks:
-                if (ctask['id'] == ptask['id'] and 
-                    (ctask.get('description') != ptask.get('description') or
-                     ctask.get('status') != ptask.get('status') or
-                     ctask.get('priority') != ptask.get('priority'))):
-                    modified.append(ctask['id'])
-            
-            # Check for downstream dependencies
-            if 'depends_on' in ctask:
-                if any(dep_id in completed for dep_id in ctask['depends_on']):
-                    downstream.append(ctask['id'])
-
-        return {
-            'completed': list(completed),
-            'modified': modified,
-            'downstream': downstream
-        }
-
-    def analyze_completion_patterns(self, task_history: List[dict]) -> dict:
-        """Analyze patterns in task completion"""
-        try:
-            # Load completed tasks from completed_tasks.json
-            completed_tasks = []
-            completed_file = os.path.join('tasks', 'completed_tasks.json')
-            if os.path.exists(completed_file):
-                with open(completed_file, 'r') as f:
-                    completed_tasks = json.load(f)
-            
-            # Calculate metrics including completed tasks
-            total_tasks = len(task_history) + len(completed_tasks)
-            completion_count = len(completed_tasks)
-            
-            # Calculate completion patterns
-            analysis = {
-                "completion_rate": completion_count / total_tasks if total_tasks > 0 else 0,
-                "completed_count": completion_count,
-                "total_count": total_tasks,
-                "avg_completion_time": self._calculate_avg_completion_time(completed_tasks),
-                "completion_by_priority": self._analyze_priority_patterns(completed_tasks),
-                "completion_by_type": self._analyze_type_patterns(completed_tasks),
-                "completion_by_label": self._analyze_label_patterns(completed_tasks),
-                "recent_completions": self._get_recent_completions(completed_tasks, days=7)
-            }
-            
-            logger.info(f"Analyzed {completion_count} completed tasks out of {total_tasks} total tasks")
-            return analysis
-            
-        except Exception as e:
-            logger.error(f"Error analyzing completion patterns: {e}")
-            return {
-                "completion_rate": 0,
-                "completed_count": 0,
-                "total_count": 0,
-                "avg_completion_time": 0,
-                "completion_by_priority": {},
-                "completion_by_type": {},
-                "completion_by_label": {},
-                "recent_completions": []
-            }
-
-    def _get_recent_completions(self, completed_tasks: List[dict], days: int = 7) -> List[dict]:
-        """Get tasks completed in the last N days"""
-        cutoff = int((datetime.now() - timedelta(days=days)).timestamp())
-        return [
-            task for task in completed_tasks
-            if task.get('completed_at', 0) > cutoff
-        ]
-
-    def _analyze_label_patterns(self, completed_tasks: List[dict]) -> Dict[str, int]:
-        """Analyze completion patterns by label"""
-        label_counts = {}
-        for task in completed_tasks:
-            for label in task.get('labels', []):
-                label_counts[label] = label_counts.get(label, 0) + 1
-        return label_counts
-
-    def _calculate_avg_completion_time(self, completed_tasks: List[dict]) -> float:
-        """Calculate average time to complete tasks"""
-        completion_times = []
-        for task in completed_tasks:
-            if task.get('created_at') and task.get('completed_at'):
-                completion_time = task['completed_at'] - task['created_at']
-                completion_times.append(completion_time)
-
-        return sum(completion_times) / len(completion_times) if completion_times else 0
-
-    def calculate_velocity_impact(self, task_history: List[dict]) -> dict:
-        """Calculate impact on project velocity"""
-        try:
-            # Calculate completion rate trend
-            completion_rates = self._calculate_completion_rate_trend(task_history)
-            
-            # Analyze velocity over time
-            velocity_trend = self._analyze_velocity_over_time(task_history)
-            
-            # Identify bottlenecks
-            bottlenecks = self._identify_bottlenecks(task_history)
-
-            return {
-                'completion_rate_change': completion_rates,
-                'velocity_trend': velocity_trend,
-                'bottleneck_analysis': bottlenecks
-            }
-        except Exception as e:
-            logger.error(f"Error calculating velocity impact: {e}")
-            return {}
-
-    def _calculate_completion_rate_trend(self, task_history: List[dict]) -> dict:
-        """Calculate trend in task completion rates"""
-        try:
-            # Group tasks by week
-            weeks = {}
-            for task in task_history:
-                if task.get('completed_at'):
-                    week = datetime.fromtimestamp(task['completed_at']).isocalendar()[1]
-                    weeks.setdefault(week, {'completed': 0, 'total': 0})
-                    weeks[week]['completed'] += 1
-                weeks.setdefault(week, {'completed': 0, 'total': 0})
-                weeks[week]['total'] += 1
-            
-            # Calculate rates and trend
-            rates = []
-            for week in sorted(weeks.keys()):
-                rate = weeks[week]['completed'] / weeks[week]['total'] if weeks[week]['total'] > 0 else 0
-                rates.append({'week': week, 'rate': rate})
-            
-            return {
-                'weekly_rates': rates,
-                'trend': self._calculate_trend(rates)
-            }
-        except Exception as e:
-            logger.error(f"Error calculating completion rate trend: {e}")
-            return {}
-
-    def _analyze_velocity_over_time(self, task_history: List[dict]) -> dict:
-        """Analyze how velocity changes over time"""
-        try:
-            # Track completed tasks per day
-            daily_velocity = {}
-            for task in task_history:
-                if task.get('completed_at'):
-                    day = datetime.fromtimestamp(task['completed_at']).date().isoformat()
-                    daily_velocity.setdefault(day, 0)
-                    daily_velocity[day] += 1
-            
-            # Calculate moving average
-            window_size = 7
-            moving_avg = []
-            days = sorted(daily_velocity.keys())
-            for i in range(len(days) - window_size + 1):
-                window = [daily_velocity[days[j]] for j in range(i, i + window_size)]
-                avg = sum(window) / window_size
-                moving_avg.append({'date': days[i + window_size - 1], 'velocity': avg})
-            
-            return {
-                'daily_velocity': [{'date': k, 'tasks': v} for k, v in daily_velocity.items()],
-                'moving_average': moving_avg
-            }
-        except Exception as e:
-            logger.error(f"Error analyzing velocity: {e}")
-            return {}
-
-    def _identify_bottlenecks(self, task_history: List[dict]) -> dict:
-        """Identify patterns that slow down task completion"""
-        try:
-            bottlenecks = {
-                'dependencies': {},
-                'duration': {},
-                'status_transitions': {}
-            }
-            
-            for task in task_history:
-                # Analyze dependency chains
-                if task.get('depends_on'):
-                    for dep in task['depends_on']:
-                        bottlenecks['dependencies'].setdefault(dep, 0)
-                        bottlenecks['dependencies'][dep] += 1
-                
-                # Analyze task duration
-                if task.get('completed_at') and task.get('created_at'):
-                    duration = task['completed_at'] - task['created_at']
-                    category = self._categorize_duration(duration)
-                    bottlenecks['duration'].setdefault(category, 0)
-                    bottlenecks['duration'][category] += 1
-                
-                # Analyze status transitions
-                if task.get('status_history'):
-                    for i in range(len(task['status_history']) - 1):
-                        transition = f"{task['status_history'][i]} -> {task['status_history'][i+1]}"
-                        bottlenecks['status_transitions'].setdefault(transition, 0)
-                        bottlenecks['status_transitions'][transition] += 1
-            
-            return bottlenecks
-        except Exception as e:
-            logger.error(f"Error identifying bottlenecks: {e}")
-            return {}
-
-    @staticmethod
-    def _calculate_trend(data: List[dict]) -> float:
-        """Calculate linear trend from time series data"""
-        try:
-            if not data:
-                return 0
-            x = list(range(len(data)))
-            y = [item['rate'] for item in data]
-            
-            # Simple linear regression
-            n = len(data)
-            sum_x = sum(x)
-            sum_y = sum(y)
-            sum_xy = sum(x_i * y_i for x_i, y_i in zip(x, y))
-            sum_xx = sum(x_i * x_i for x_i in x)
-            
-            slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x)
-            return slope
-        except Exception as e:
-            logger.error(f"Error calculating trend: {e}")
-            return 0
-
-    @staticmethod
-    def _categorize_duration(duration: float) -> str:
-        """Categorize task duration into buckets"""
-        if duration < 3600:  # 1 hour
-            return "quick"
-        elif duration < 86400:  # 1 day
-            return "medium"
-        elif duration < 604800:  # 1 week
-            return "long"
-        else:
-            return "extended"
-
-
-# ---------------------------------------------------------------------------
-# CLASS: ActionSuggestionSystem
-# ---------------------------------------------------------------------------
-class ActionSuggestionSystem:
-    """Main application class for processing user queries and updating feedback."""
-
-    def __init__(self,
-                 llm_service: LLMService,
-                 context_aggregator: ContextAggregator,
-                 feedback_repo: FeedbackRepository,
-                 feedback_collector: FeedbackCollector,
-                 task_analyzer: TaskAnalysisService,
-                 user_tracker: UserInteractionTracker,
-                 temporal_analyzer: TemporalAnalysis):
+    def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
-        self.context_aggregator = context_aggregator
-        self.feedback_repo = feedback_repo
-        self.feedback_collector = feedback_collector
-        self.task_analyzer = task_analyzer
-        self.user_tracker = user_tracker
-        self.temporal_analyzer = temporal_analyzer
-
-    def process_query(self, query: str) -> str:
-        """Process a user query and return a suggestion"""
-        try:
-            # Get repository contents
-            repo_contents = self.context_aggregator.github_monitor.get_tasks()
-            
-            # Aggregate context with feedback
-            context = self.context_aggregator.aggregate_context(query, repo_contents)
-            
-            # Generate suggestion
-            suggestion = self.llm_service.generate_suggestion(context)
-            
-            return suggestion
-        except Exception as e:
-            logger.error(f"Error processing query: {e}")
-            raise
-
-    def update_feedback(self):
-        """
-        Periodic feedback update process
-        """
-        try:
-            # Get current timestamp for this feedback cycle
-            current_time = int(time.time())
-            
-            # Collect feedback from multiple sources
-            task_analyzer_feedback = self.task_analyzer.analyze_completion_patterns(
-                self.context_aggregator.get_feedback_context().get("tasks_content", {}).get("tasks", [])
-            )
-            
-            temporal_feedback = self.temporal_analyzer.analyze_patterns(
-                self.context_aggregator.get_feedback_context().get("tasks_content", {}).get("tasks", [])
-            )
-            
-            # Aggregate all feedback
-            aggregated_feedback = {
-                "timestamp": current_time,
-                "task_patterns": task_analyzer_feedback,
-                "temporal_patterns": temporal_feedback,
-                "user_interactions": self.user_tracker.interactions_log
-            }
-
-            # Store in repository
-            self.feedback_repo.update_patterns(task_analyzer_feedback)
-            self.feedback_repo.update_temporal(temporal_feedback)
-            self.feedback_repo.update_outcomes(aggregated_feedback)
-            
-            print("[INFO] Successfully updated feedback in repository")
-            
-        except Exception as e:
-            print(f"[ERROR] Failed to update feedback: {e}")
-
-
-# ---------------------------------------------------------------------------
-# Cron-like Jobs
-# ---------------------------------------------------------------------------
-def hourly_task_sync(task_analyzer: TaskAnalysisService):
-    """
-    Sync tasks and run feedback updates
-    """
-    try:
-        # Create resource manager first
-        resource_manager = GitHubResourceManager(GITHUB_TOKEN, GITHUB_REPO)
-        
-        # Create GitHub monitor with resource manager
-        github_monitor = GitHubActivityMonitor(resource_manager)
-        current_tasks = github_monitor.get_tasks().get("tasks", [])
-        
-        # Load previous tasks from feedback repository
-        feedback_repo = FeedbackRepository(GITHUB_TOKEN, GITHUB_REPO)
-        
-        # Ensure previous_tasks.json exists
-        feedback_repo.ensure_file_exists(f"{FEEDBACK_DIR}/previous_tasks.json", "[]")
-        
-        try:
-            previous_tasks_content = feedback_repo.repo.get_contents(f"{FEEDBACK_DIR}/previous_tasks.json")
-            previous_tasks = json.loads(previous_tasks_content.decoded_content.decode())
-        except Exception as e:
-            logger.warning(f"Could not load previous tasks, using empty list: {e}")
-            previous_tasks = []
-        
-        # Analyze changes
-        changes = task_analyzer.monitor_task_changes(previous_tasks, current_tasks)
-        
-        # Store current tasks as previous for next sync
-        feedback_repo.update_file(
-            f"{FEEDBACK_DIR}/previous_tasks.json",
-            "Update previous tasks",
-            json.dumps(current_tasks, indent=2)
-        )
-        
-        # Store changes in feedback
-        feedback_repo.update_outcomes({
-            "timestamp": time.time(),
-            "type": "task_sync",
-            "changes": changes
-        })
-        
-        print(f"[INFO] Task sync completed. Changes detected: {changes}")
-        
-    except Exception as e:
-        print(f"[ERROR] Task sync failed: {e}")
-
-
-def daily_pattern_analysis(task_analyzer: TaskAnalysisService,
-                         temporal_analyzer: TemporalAnalysis,
-                         feedback_repo: FeedbackRepository):
-    """
-    Perform daily analysis of patterns
-    """
-    try:
-        # Create resource manager first
-        resource_manager = GitHubResourceManager(GITHUB_TOKEN, GITHUB_REPO)
-        
-        # Create GitHub monitor with resource manager
-        github_monitor = GitHubActivityMonitor(resource_manager)
-        task_history = github_monitor.get_tasks().get("tasks", [])
-        
-        # Analyze patterns
-        completion_stats = task_analyzer.analyze_completion_patterns(task_history)
-        temporal_data = temporal_analyzer.analyze_patterns(task_history)
-        
-        # Store analysis results
-        analysis_results = {
-            "timestamp": time.time(),
-            "completion_patterns": completion_stats,
-            "temporal_patterns": temporal_data
+        self.cache_dir = os.path.join('tasks', 'reduced_context')
+        os.makedirs(self.cache_dir, exist_ok=True)
+        # Define files/types to exclude from compression
+        self.excluded_files = {
+            'system_prompt.txt',
+            'completed_tasks.json',
+            'inbox_tasks.json'
         }
+        self.excluded_extensions = {'.json'}
+        self.excluded_prefixes = {'project_'}  # Add excluded prefixes
         
-        feedback_repo.update_patterns(completion_stats)
-        feedback_repo.update_temporal(temporal_data)
-        
-        print("[INFO] Daily pattern analysis completed successfully")
-        
-    except Exception as e:
-        print(f"[ERROR] Daily pattern analysis failed: {e}")
-
-
-# ---------------------------------------------------------------------------
-# Main initialization
-# ---------------------------------------------------------------------------
-def initialize_system():
-    """Initialize the system once at startup"""
-    global system
-    if system is None:
+    def get_reduced_version(self, file_path: str) -> str:
+        """Get or create reduced version of a document"""
         try:
-            # Initialize GitHub components first
-            github_token = os.getenv('GITHUB_TOKEN')
-            github_repo = os.getenv('GITHUB_REPO')
+            # Check if file should be excluded
+            base_name = os.path.basename(file_path)
+            file_ext = os.path.splitext(base_name)[1]
             
-            if not github_token or not github_repo:
-                logger.warning("GitHub credentials not found in environment variables")
-                github_token = 'YOUR_TOKEN_HERE'
-                github_repo = 'YOUR_REPO_HERE'
+            # Check all exclusion criteria
+            if (base_name in self.excluded_files or 
+                file_ext in self.excluded_extensions or
+                any(base_name.startswith(prefix) for prefix in self.excluded_prefixes)):
+                logger.info(f"Skipping compression for excluded file: {base_name}")
+                return file_path
             
-            # Create resource manager and GitHub monitor
-            resource_manager = GitHubResourceManager(github_token, github_repo)
-            github_monitor = GitHubActivityMonitor(resource_manager)
+            # Generate cache path
+            cache_path = os.path.join(self.cache_dir, f"reduced_{base_name}")
             
-            # Initialize other components
-            user_tracker = UserInteractionTracker()
-            temporal_analyzer = TemporalAnalysis()
-            task_analyzer = TaskAnalysisService()
-            feedback_repo = FeedbackRepository(github_token, github_repo)
+            # Check if reduced version exists and is newer than original
+            if os.path.exists(cache_path):
+                if os.path.getmtime(cache_path) > os.path.getmtime(file_path):
+                    return cache_path
             
-            # Initialize LLM service
-            llm_service = LLMService()
-            
-            # Initialize context aggregator
-            context_aggregator = ContextAggregator(github_monitor)
-            
-            # Initialize feedback collector
-            feedback_collector = FeedbackCollector(
-                github_monitor=github_monitor,
-                user_tracker=user_tracker,
-                temporal_analyzer=temporal_analyzer
-            )
-            
-            # Create the main system with all dependencies
-            system = ActionSuggestionSystem(
-                llm_service=llm_service,
-                context_aggregator=context_aggregator,
-                feedback_repo=feedback_repo,
-                feedback_collector=feedback_collector,
-                task_analyzer=task_analyzer,
-                user_tracker=user_tracker,
-                temporal_analyzer=temporal_analyzer
-            )
-            
-            return system
+            # If not cached or outdated, compress the document
+            return self.compress_document(file_path)
             
         except Exception as e:
-            logger.error(f"Error initializing system: {e}")
-            raise
-    return system
+            logger.error(f"Error getting reduced version: {e}")
+            return file_path  # Return original if compression fails
+    
+    def compress_document(self, file_path: str) -> str:
+        """Compress a document using LLM summarization"""
+        try:
+            # Check exclusions again for safety
+            base_name = os.path.basename(file_path)
+            file_ext = os.path.splitext(base_name)[1]
+            
+            if (base_name in self.excluded_files or 
+                file_ext in self.excluded_extensions or
+                any(base_name.startswith(prefix) for prefix in self.excluded_prefixes)):
+                return file_path
+            
+            # Read the original document
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Skip if content is already small
+            if len(content) <= 4000:
+                return file_path
+            
+            # Create prompt for summarization using your improved prompt
+            prompt = f"""Please analyze and summarize the following document. Your summary should:
+1. Maintain all key information, technical details, and specific data points
+2. Preserve any numerical values, dates, and proper nouns
+3. Keep critical action items or tasks
+4. Reduce the overall length by 50-70%
+5. Use clear, concise language while maintaining technical accuracy
 
+Document to summarize:
+{content[:8000]}  # Only process first 8000 chars if very large
+
+If the content was truncated, please add: '[Content truncated for length]'
+"""
+            
+            # Get summary from LLM
+            summary = self.llm_service.generate_suggestion({"user_query": prompt})
+            
+            # Save to cache
+            cache_path = os.path.join(
+                self.cache_dir, 
+                f"reduced_{os.path.basename(file_path)}"
+            )
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                f.write(summary)
+            
+            return cache_path
+            
+        except Exception as e:
+            logger.error(f"Error compressing document: {e}")
+            return file_path  # Return original if compression fails
 
 def ensure_directories():
-    """Ensure all required directories and files exist"""
-    try:
-        # Create directories if they don't exist
-        os.makedirs('data', exist_ok=True)
-        os.makedirs('feedback', exist_ok=True)
-        
-        # Initialize empty files if they don't exist
-        default_files = {
-            'data/action_outcomes.jsonl': '',
-            'data/success_patterns.json': '{}',
-            'data/temporal_analysis.json': '{}',
-            'feedback/completed_tasks.jsonl': ''
-        }
-        
-        for filepath, default_content in default_files.items():
-            if not os.path.exists(filepath):
-                with open(filepath, 'w') as f:
-                    f.write(default_content)
-                logger.info(f"Created file: {filepath}")
-                
-        logger.info("Directory structure initialized successfully")
-    except Exception as e:
-        logger.error(f"Error initializing directories: {e}")
-        raise
-
-
-# ---------------------------------------------------------------------------
-# Main execution
-# ---------------------------------------------------------------------------
-app = Flask(__name__, static_folder='static')
-CORS(app, resources={r"/api/*": {"origins": "*"}})
-system = None  # Will be initialized in main()
-
-def initialize_system():
-    """Initialize the system once at startup"""
-    global system
-    if system is None:
-        try:
-            # Initialize GitHub components first
-            github_token = os.getenv('GITHUB_TOKEN')
-            github_repo = os.getenv('GITHUB_REPO')
-            
-            if not github_token or not github_repo:
-                logger.warning("GitHub credentials not found in environment variables")
-                github_token = 'YOUR_TOKEN_HERE'
-                github_repo = 'YOUR_REPO_HERE'
-            
-            # Create resource manager and GitHub monitor
-            resource_manager = GitHubResourceManager(github_token, github_repo)
-            github_monitor = GitHubActivityMonitor(resource_manager)
-            
-            # Initialize other components
-            user_tracker = UserInteractionTracker()
-            temporal_analyzer = TemporalAnalysis()
-            task_analyzer = TaskAnalysisService()
-            feedback_repo = FeedbackRepository(github_token, github_repo)
-            
-            # Initialize LLM service
-            llm_service = LLMService()
-            
-            # Initialize context aggregator
-            context_aggregator = ContextAggregator(github_monitor)
-            
-            # Initialize feedback collector
-            feedback_collector = FeedbackCollector(
-                github_monitor=github_monitor,
-                user_tracker=user_tracker,
-                temporal_analyzer=temporal_analyzer
-            )
-            
-            # Create the main system with all dependencies
-            system = ActionSuggestionSystem(
-                llm_service=llm_service,
-                context_aggregator=context_aggregator,
-                feedback_repo=feedback_repo,
-                feedback_collector=feedback_collector,
-                task_analyzer=task_analyzer,
-                user_tracker=user_tracker,
-                temporal_analyzer=temporal_analyzer
-            )
-            
-            return system
-            
-        except Exception as e:
-            logger.error(f"Error initializing system: {e}")
-            raise
-    return system
-
-@app.route('/')
-def index():
-    """Serve the main HTML interface"""
-    return render_template('index.html')
-
-@app.route('/api/query', methods=['POST'])
-def handle_query():
-    """Handle incoming queries using the global system instance"""
-    try:
-        data = request.get_json()
-        if not data or 'query' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Missing query in request'
-            }), 400
-
-        # Use the global system instance instead of creating a new one
-        suggestion = system.process_query(data['query'])
-        
-        return jsonify({
-            'success': True,
-            'suggestion': suggestion
-        })
-    except Exception as e:
-        logger.error(f"Error processing query: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-# Add this function to handle periodic GitHub updates
-def sync_local_to_github(file_pattern='inbox'):
-    """Sync local task files to GitHub repository"""
-    try:
-        logger.info(f"Starting sync with pattern: {file_pattern}")
-        github_token = os.getenv('GITHUB_TOKEN')
-        if not github_token:
-            raise ValueError("GITHUB_TOKEN not found in environment variables")
-            
-        github = Github(github_token)
-        repo = github.get_repo(GITHUB_REPO)
-        logger.info(f"Connected to GitHub repo: {GITHUB_REPO}")
-        
-        # Get absolute paths to directories
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        tasks_dir = os.path.join(base_dir, 'tasks')
-        data_dir = os.path.join(base_dir, 'data')
-        
-        # Determine which files to sync
-        files_to_sync = []
-        if file_pattern == 'inbox':
-            files_to_sync = [('tasks', 'inbox_tasks.json')]
-            logger.info("Syncing inbox tasks only")
-        else:
-            # Add task files with their directory prefix
-            files_to_sync = [('tasks', f) for f in os.listdir(tasks_dir) 
-                           if f.endswith(('.json', '.txt'))]
-            logger.info(f"Found {len(files_to_sync)} files to sync")
-        
-        # Add feedback files to sync
-        if file_pattern == 'all':
-            data_files = [
-                ('data', 'action_outcomes.jsonl'),
-                ('data', 'success_patterns.json'),
-                ('data', 'temporal_analysis.json'),
-            ]
-            files_to_sync.extend(data_files)
-            
-        for dir_prefix, filename in files_to_sync:
-            max_retries = 3
-            retry_count = 0
-            
-            while retry_count < max_retries:
-                try:
-                    # Determine correct local directory
-                    local_dir = data_dir if dir_prefix == 'data' else tasks_dir
-                    file_path = os.path.join(local_dir, filename)
-                    logger.info(f"Reading local file: {file_path}")
-                    
-                    if not os.path.exists(file_path):
-                        logger.warning(f"File not found: {file_path}")
-                        break
-                    
-                    # Read file content based on type
-                    try:
-                        if filename.endswith('.json'):
-                            with open(file_path, 'r') as f:
-                                file_content_str = json.dumps(json.load(f), indent=2)
-                        else:  # .txt files
-                            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-                                file_content_str = f.read()
-                    except UnicodeDecodeError:
-                        logger.error(f"Unicode decode error in {filename}, trying with 'latin-1' encoding")
-                        with open(file_path, 'r', encoding='latin-1') as f:
-                            file_content_str = f.read()
-                    
-                    logger.info(f"Successfully read {filename}")
-                    
-                    # Try to get existing file from GitHub
-                    github_path = f"{dir_prefix}/{filename}"
-                    logger.info(f"Checking for existing file in GitHub: {github_path}")
-                    
-                    try:
-                        file_content = repo.get_contents(github_path)
-                        current_content = file_content.decoded_content.decode('utf-8')
-                        
-                        # Compare contents
-                        if current_content == file_content_str:
-                            logger.info(f"No changes detected for {filename}, skipping update")
-                            break
-                        
-                        logger.info(f"Changes detected, updating {github_path}")
-                        result = repo.update_file(
-                            github_path,
-                            f"Update {filename} from local system",
-                            file_content_str,
-                            file_content.sha
-                        )
-                        logger.info(f"Successfully updated {filename} in GitHub")
-                    except Exception as not_found:
-                        logger.info(f"File not found in GitHub, creating new: {github_path}")
-                        result = repo.create_file(
-                            github_path,
-                            f"Initial upload of {filename}",
-                            file_content_str
-                        )
-                        logger.info(f"Successfully created {filename} in GitHub")
-                    
-                    logger.info(f"Sync complete for {filename}")
-                    sleep(1)
-                    break
-                    
-                except RateLimitExceededException:
-                    rate_limit = github.get_rate_limit()
-                    wait_time = (rate_limit.core.reset - datetime.now()).seconds + 60
-                    logger.warning(f"Rate limit exceeded. Waiting {wait_time} seconds...")
-                    sleep(wait_time)
-                    retry_count += 1
-                    
-                except Exception as e:
-                    logger.error(f"Error processing {filename}: {str(e)}")
-                    retry_count += 1
-                    if retry_count < max_retries:
-                        sleep(5)
-                    else:
-                        logger.error(f"Failed to sync {filename} after {max_retries} attempts")
-                        break
-                
-    except Exception as e:
-        logger.error(f"Failed to initialize GitHub sync: {str(e)}")
-        raise
-
-@app.route('/api/projects', methods=['GET'])
-def get_projects():
-    """Get list of project files"""
-    try:
-        tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
-        project_files = [f for f in os.listdir(tasks_dir) 
-                        if f.startswith('project_') and f.endswith('.txt')]
-        return jsonify({
-            'success': True,
-            'projects': project_files
-        })
-    except Exception as e:
-        logger.error(f"Error getting projects: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+    """Create necessary directories if they don't exist"""
+    directories = [
+        'tasks',
+        'tasks/reduced_context',
+        'data',
+        'feedback',
+        'templates'  # Add templates directory
+    ]
+    
+    for directory in directories:
+        os.makedirs(directory, exist_ok=True)
+        logger.info(f"Ensured directory exists: {directory}")
 
 @app.route('/api/project/<project_name>', methods=['GET', 'POST'])
 def handle_project(project_name):
@@ -2302,7 +1703,7 @@ def handle_project(project_name):
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    """Handle file uploads to tasks directory"""
+    """Handle file uploads to tasks directory with compression for large text files"""
     try:
         if 'file' not in request.files:
             return jsonify({
@@ -2322,14 +1723,30 @@ def upload_file():
         tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
         file_path = os.path.join(tasks_dir, filename)
         
-        # Save the file
+        # Save the original file
         file.save(file_path)
         
-        logger.info(f"Successfully uploaded file: {filename}")
+        # If it's a text file and large enough, compress it immediately
+        if filename.endswith('.txt'):
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+                
+            if len(content) > 4000:  # Only compress large files
+                # Initialize compressor
+                llm_service = LLMService()
+                context_compressor = ContextCompressor(llm_service)
+                
+                # Compress the file
+                reduced_path = context_compressor.compress_document(file_path)
+                
+                logger.info(f"Compressed {filename} at upload time. Reduced version stored at {reduced_path}")
+        
         return jsonify({
             'success': True,
-            'filename': filename
+            'filename': filename,
+            'compressed': filename.endswith('.txt') and len(content) > 4000
         })
+        
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
         return jsonify({
@@ -2388,33 +1805,155 @@ def get_analysis_report():
             "error": str(e)
         }), 500
 
-def main():
+def initialize_system():
+    """Initialize the core system components"""
     try:
-        print("Initializing ProjectM system...")
+        # Initialize resource manager first
+        resource_manager = GitHubResourceManager(
+            github_token=os.getenv('GITHUB_TOKEN'),
+            repo_name=os.getenv('GITHUB_REPO')
+        )
+        
+        # Initialize GitHub monitor with resource manager
+        github_monitor = GitHubActivityMonitor(resource_manager)
+        
+        # Initialize user interaction tracker
+        user_tracker = UserInteractionTracker()
+        
+        # Initialize temporal analyzer
+        temporal_analyzer = TemporalAnalysis()
+        
+        # Initialize feedback collector
+        feedback_collector = FeedbackCollector(github_monitor, user_tracker, temporal_analyzer)
+        
+        # Initialize context aggregator
+        context_aggregator = ContextAggregator(github_monitor)
+        
+        # Initialize LLM service
+        llm_service = LLMService()
+        
+        return SimpleNamespace(
+            resource_manager=resource_manager,
+            github_monitor=github_monitor,
+            user_tracker=user_tracker,
+            temporal_analyzer=temporal_analyzer,
+            feedback_collector=feedback_collector,
+            context_aggregator=context_aggregator,
+            llm_service=llm_service
+        )
+    except Exception as e:
+        logger.error(f"Error initializing system: {e}")
+        raise
+
+def main():
+    """Main entry point for the application"""
+    try:
+        # Ensure all required directories exist
         ensure_directories()
         
-        # Initialize the global system once
-        global system
+        # Initialize system components
         system = initialize_system()
-        print("System initialized successfully")
         
-        # Add periodic feedback updates
-        def update_feedback_job():
-            try:
-                system.update_feedback()
-            except Exception as e:
-                logger.error(f"Error in feedback update job: {e}")
-        
-        # Schedule feedback updates (every hour)
+        # Initialize scheduler for background tasks
         scheduler = BackgroundScheduler()
-        scheduler.add_job(update_feedback_job, 'interval', hours=1)
+        
+        # Add scheduled jobs
+        scheduler.add_job(
+            func=lambda: system.feedback_collector.update_feedback(),
+            trigger='interval',
+            hours=1,
+            id='hourly_feedback_update'
+        )
+        
+        scheduler.add_job(
+            func=lambda: system.temporal_analyzer.analyze_patterns(
+                system.github_monitor.get_tasks()
+            ),
+            trigger='interval',
+            days=1,
+            id='daily_pattern_analysis'
+        )
+        
+        # Start the scheduler
         scheduler.start()
         
-        print("Starting ProjectM server...")
-        app.run(debug=True, host='0.0.0.0', port=5001)
+        # Start Flask app with port 5001 instead of 5000
+        app.run(host='0.0.0.0', port=5001, debug=True)
+        
     except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        logger.error(f"Error in main: {e}")
         sys.exit(1)
 
-if __name__ == "__main__":
+@app.route('/')
+def index():
+    """Serve the main application page"""
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Error serving index page: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Add this route for getting projects list
+@app.route('/api/projects', methods=['GET'])
+def get_projects():
+    """Get list of all project files"""
+    try:
+        tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
+        projects = [f for f in os.listdir(tasks_dir) 
+                   if f.startswith('project_') and f.endswith('.txt')]
+        
+        return jsonify({
+            'success': True,
+            'projects': projects
+        })
+    except Exception as e:
+        logger.error(f"Error getting projects: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Add back the query endpoint
+@app.route('/api/query', methods=['POST'])
+def handle_query():
+    """Handle incoming queries using the global system instance"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing query in request'
+            }), 400
+
+        # Get repository contents including tasks and feedback
+        system = initialize_system()
+        repo_contents = system.github_monitor.get_tasks()
+        logger.info(f"Retrieved {len(repo_contents.get('tasks', []))} tasks from GitHub")
+        
+        # Aggregate context with feedback
+        context = system.context_aggregator.aggregate_context(data['query'], repo_contents)
+        logger.info("Context aggregated successfully")
+        
+        # Generate suggestion using LLM
+        suggestion = system.llm_service.generate_suggestion(context)
+        logger.info("Generated suggestion successfully")
+        
+        # Collect feedback
+        system.feedback_collector.collect_feedback(suggestion)
+
+        return jsonify({
+            'success': True,
+            'suggestion': suggestion
+        })
+    except Exception as e:
+        logger.error(f"Error processing query: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+if __name__ == '__main__':
     main()
