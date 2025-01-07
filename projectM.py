@@ -1664,9 +1664,10 @@ def ensure_directories():
     directories = [
         'tasks',
         'tasks/reduced_context',
+        'tasks/uncompressed_context',  # Add uncompressed directory
         'data',
         'feedback',
-        'templates'  # Add templates directory
+        'templates'
     ]
     
     for directory in directories:
@@ -1723,10 +1724,17 @@ def upload_file():
         tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
         file_path = os.path.join(tasks_dir, filename)
         
-        # Save the original file
+        # Save the original file to tasks directory
         file.save(file_path)
         
-        # If it's a text file and large enough, compress it immediately
+        # Also save an uncompressed copy
+        uncompressed_dir = os.path.join(tasks_dir, 'uncompressed_context')
+        uncompressed_path = os.path.join(uncompressed_dir, filename)
+        with open(file_path, 'rb') as src, open(uncompressed_path, 'wb') as dst:
+            dst.write(src.read())
+        logger.info(f"Saved uncompressed copy to: {uncompressed_path}")
+        
+        # If it's a text file and large enough, compress it for API use
         if filename.endswith('.txt'):
             with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
                 content = f.read()
@@ -1744,7 +1752,8 @@ def upload_file():
         return jsonify({
             'success': True,
             'filename': filename,
-            'compressed': filename.endswith('.txt') and len(content) > 4000
+            'compressed': filename.endswith('.txt') and len(content) > 4000,
+            'uncompressed_path': uncompressed_path
         })
         
     except Exception as e:

@@ -1,0 +1,76 @@
+﻿CAUSALFound: A Foundation Model for Personalised Treatment Effect Prediction and Causal Inference
+
+
+Summary
+The landscape of healthcare has been transformed by the increasing availability of comprehensive electronic health records (EHR), presenting opportunities for understanding treatment effects across diverse populations. While randomised controlled trials (RCTs) remain the gold standard for establishing treatment efficacy, they face inherent limitations in their ability to inform personalised clinical decision-making. These limitations stem from their restricted phenotypic diversity due to strict inclusion criteria, practical constraints on investigating therapeutic combinations, and persistent challenges in generalising findings to underrepresented populations.
+
+
+CAUSALFound addresses these challenges through a novel causal foundation model that combines multiple advanced synthetic data generation methods, systematic trial emulation, and deep learning. This innovative approach enables real-time, personalised treatment effect predictions while mapping the complex relationships between patient phenotypes and treatment outcomes. By leveraging Scotland's comprehensive Routinely Collected Data infrastructure, we are developing a robust framework for causal inference and clinical decision support that promises to bridge the gap between population-level evidence and individualised patient care.
+
+
+Project Objectives
+Our project is driven by three primary objectives that address critical needs in modern healthcare delivery and research. First, we aim to enable real-time, validated, and calibrated personalised treatment effect predictions at the point of care, empowering clinicians with evidence-based decision support tailored to individual patients. Second, we seek to facilitate the exploration and characterization of what we term the "efficacy manifold" - the high-dimensional relationship between patient phenotypes, biomarker profiles, and treatment outcomes. This understanding will unlock new insights into treatment response patterns across diverse populations. Finally, we are developing a framework that can be extended beyond therapeutic interventions to predict the impact of variations in any EHR features on clinical outcomes, creating a versatile tool for healthcare research and delivery.
+
+
+Technical Architecture and Methods
+(i) Data Foundation and Synthetic Data Generation
+The foundation of CAUSALFound rests on the ecosystem of linked data available within Scottish Health Boards. This comprehensive data resource encompasses laboratory investigation results, prescribing information including both prescription and encashment data, inpatient and outpatient coding data, and mortality information. This diverse data foundation enables us to capture the full complexity of patient care trajectories and treatment outcomes.
+
+
+Our synthetic data generation pipeline represents a significant advancement in the field, employing multiple complementary approaches to ensure robust and realistic data synthesis. At the heart of this pipeline is the ability to use state-of-the-art synthetic data generation methods - for example a bespoke partial Conditional Variational Autoencoder (d(p^2)VAE) that accepts conditioning information for feature subsets, enabling targeted generation while maintaining flexibility in non-conditioned features, and a Conditional GAN (CT-GAN) specifically designed for tabular data generation, with a discriminator trained to assess both the realism of generated sequences and their adherence to conditioning variables.
+
+
+To address the temporal aspects of healthcare data, we implement a time-series GAN with a recurrent architecture in both generator and discriminator networks. This architecture incorporates attention mechanisms to capture long-term dependencies in the temporal data, ensuring the preservation of critical temporal patterns. Additionally, our diffusion model, adapted specifically for temporal data generation, implements a gradual denoising process that maintains both temporal consistency and feature relationships.
+
+
+(ii) Target Trial Emulation Framework
+
+
+Our trial emulation framework represents a sophisticated approach to leveraging observational data for causal inference. The framework implements systematic trial emulations while maintaining careful separation between different synthetic data sources, ensuring the robustness and reliability of our findings. The trial design process incorporates clinically plausible intervention sets based on established guidelines, considering both individual and combination therapies. We pay particular attention to temporal dynamics of treatment effects and incorporate multiple outcome measures across different timepoints, while carefully minimising potential confounding factors.
+
+
+Effect size calculations are tailored to the nature of the outcome being studied, employing hazard ratios for time-to-event data and mean/median differences for continuous outcomes. Our framework explicitly accounts for treatment-specific effects, time-varying confounding, and effect modification by patient characteristics, providing a comprehensive understanding of treatment impacts across different patient subgroups.
+
+
+(iii) Calibration Framework
+Our calibration framework represents a novel approach to ensuring the accuracy and reliability of treatment effect predictions. The process begins with initial calibration against available RCT data, mapping RCT populations to our synthetic cohort feature space and comparing predicted effect sizes with observed outcomes. This initial calibration serves as the foundation for our innovative calibration manifold.
+
+
+The calibration manifold represents a continuous, multi-dimensional surface in the space of population characteristics and effect size adjustments. This geometric approach captures how calibration requirements vary across different population phenotypes and treatment contexts. Through careful embedding of population characteristics and calibration coefficients, followed by dimensionality reduction that preserves local geometric structure, we create a robust framework for extending calibration to populations without direct RCT validation.
+
+
+(iv) Foundation Model Architecture
+The core of CAUSALFound is its multi-stream architecture, designed to process and integrate different types of healthcare data effectively. The model implements specialised processing pathways for EHR features, intervention specifications, and effect sizes, each optimised for its specific data type and requirements.
+
+
+The EHR feature processing stream incorporates static feature embedding layers for demographic and baseline characteristics, coupled with temporal feature processing using attention-based architectures for longitudinal data. This is complemented by feature interaction layers that capture complex relationships between clinical variables. The intervention processing stream provides dedicated embedding layers for intervention specifications, handling both temporal aspects and multi-intervention interactions.
+
+
+Clinical Applications and Utility
+The practical implementation of CAUSALFound opens up numerous opportunities for improving clinical care and healthcare delivery. In the realm of personalised treatment selection, our system enables sophisticated drug-specific effect size estimation and response trajectory prediction. Clinicians can access detailed predictions about potential adverse events and optimise both treatment sequences and dosing regimens. This capability extends to comparative effectiveness analyses, allowing for evidence-based comparisons between different treatment options and evaluation of combination therapies, while considering both cost-effectiveness and quality of life impacts.
+
+
+Risk stratification and monitoring capabilities are enhanced through dynamic risk assessment features that update in real-time as new patient data becomes available. The system generates trajectory-based predictions and early warnings, helping optimise intervention timing and monitoring frequency. At a population level, these capabilities facilitate efficient resource allocation and care pathway customization, while helping identify and address outcome disparities across different patient groups.
+
+
+The clinical decision support features of CAUSALFound provide comprehensive point-of-care guidance, including treatment recommendations, contraindication flagging, and drug interaction checking. The system assists with dosing optimization and suggests appropriate monitoring schedules. Furthermore, it supports evidence synthesis by checking alignment with current literature, verifying guidelines compliance, and integrating real-world evidence while effectively communicating uncertainty in predictions.
+
+
+Impact Assessment Framework
+The impact of CAUSALFound can be evaluated across multiple dimensions. In terms of clinical outcomes, we expect to see improvements in treatment response rates, reductions in adverse events, and optimised time to therapeutic goals. The system's ability to support evidence-based decision-making should lead to improved guidelines adherence and care coordination.
+
+
+The economic impact of the system extends beyond direct cost reduction through treatment optimization and adverse event prevention. By improving resource utilization and workflow efficiency, CAUSALFound can help healthcare organizations achieve significant operational benefits. The system's automation capabilities in areas such as documentation and care coordination contribute to overall efficiency improvements.
+
+
+In the research and development domain, CAUSALFound provides valuable tools for optimizing clinical trial design, improving patient selection, and calculating appropriate sample sizes. The system's ability to monitor treatment effectiveness and detect safety signals in real-world settings creates new opportunities for continuous learning and improvement in clinical practice.
+
+
+Future Extensions and Conclusion
+Looking ahead, CAUSALFound has significant potential for expansion into additional clinical domains. The framework can be adapted for specialty-specific features, rare diseases, and specific population groups such as paediatric or geriatric patients. Enhanced functionality through multi-modal data integration, genomic feature incorporation, and inclusion of social determinants of health will further increase the system's utility.
+
+
+The system's evolution will be supported by continuous learning implementation, automated validation pipelines, and sophisticated feature importance tracking. Regular model drift detection and performance optimization will ensure sustained reliability and effectiveness.
+
+
+CAUSALFound represents a significant advance in the application of causal inference methods to personalised medicine. By bridging the gap between population-level evidence and individual patient care, the system provides clinicians with rapid, evidence-based guidance while uncovering novel patterns in treatment response across diverse patient populations. Through continuous monitoring and systematic updates, CAUSALFound maintains its reliability and relevance, serving as a valuable tool for both clinical practice and research advancement.
