@@ -112,11 +112,24 @@
             margin-bottom: 20px;
             font-weight: 500;
         }
+
+        .current-provider {
+            font-size: 0.8em;
+            color: #4CAF50;
+            background-color: #242424;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
     <nav class="top-nav">
-        <div class="logo">KAIROS project management</div>
+        <div class="logo">
+            KAIROS project management
+            <span class="current-provider">{{ settings.current_provider|title }}</span>
+        </div>
         <div class="nav-links">
             <a href="/" class="nav-link">Dashboard</a>
             <a href="/settings" class="nav-link active">Settings</a>

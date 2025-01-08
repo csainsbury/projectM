@@ -851,60 +851,31 @@ class FeedbackCollector:
             # Ensure the data directory exists
             os.makedirs(self.data_dir, exist_ok=True)
             
-            # Initialize feedback data structure
-            feedback_data = {
-                'success_patterns': {
-                    'completion_rate': 0.0,
-                    'avg_completion_time': 0.0,
-                    'common_blockers': [],
-                    'successful_labels': []
-                },
-                'temporal_analysis': {},
-                'action_outcomes': []
+            # Get completed tasks
+            completed_tasks = []
+            completed_file = os.path.join('tasks', 'completed_tasks.json')
+            if os.path.exists(completed_file):
+                with open(completed_file, 'r') as f:
+                    completed_tasks = json.load(f)
+            
+            # Calculate metrics
+            total_tasks = len(task_history)
+            completed_count = len(completed_tasks)
+            completion_rate = completed_count / total_tasks if total_tasks > 0 else 0
+            
+            # Update success patterns
+            success_patterns = {
+                'completion_rate': completion_rate,
+                'completed_count': completed_count,
+                'last_updated': int(time.time()),
+                'common_blockers': self._analyze_blockers(completed_tasks),
+                'successful_labels': self._analyze_successful_labels(completed_tasks)
             }
             
-            # Load existing data if available
-            try:
-                if os.path.exists(self.success_patterns_file):
-                    with open(self.success_patterns_file, 'r') as f:
-                        existing_patterns = json.load(f)
-                        feedback_data['success_patterns'].update(existing_patterns)
-            except json.JSONDecodeError:
-                logger.warning("Invalid JSON in success_patterns.json, using default")
-            
-            try:
-                if os.path.exists(self.temporal_analysis_file):
-                    with open(self.temporal_analysis_file, 'r') as f:
-                        feedback_data['temporal_analysis'] = json.load(f)
-            except json.JSONDecodeError:
-                logger.warning("Invalid JSON in temporal_analysis.json, using default")
-            
-            # Update completion data
-            completed_tasks = [t for t in task_history if isinstance(t, dict) and t.get('status') == 'completed']
-            total_tasks = len([t for t in task_history if isinstance(t, dict)])
-            
-            if total_tasks > 0:
-                feedback_data['success_patterns']['completion_rate'] = len(completed_tasks) / total_tasks
-            
-            # Save updated data
-            with open(self.success_patterns_file, 'w') as f:
-                json.dump(feedback_data['success_patterns'], f, indent=2)
-            
-            with open(self.temporal_analysis_file, 'w') as f:
-                json.dump(feedback_data['temporal_analysis'], f, indent=2)
-            
-            # Append to action outcomes file
-            if completed_tasks:
-                with jsonlines.open(self.action_outcomes_file, mode='a') as writer:
-                    for task in completed_tasks:
-                        writer.write({
-                            'task_id': task.get('id'),
-                            'completion_time': task.get('completed_at'),
-                            'success_factors': task.get('success_factors', []),
-                            'blockers': task.get('blockers', [])
-                        })
-            
-            logger.info(f"Updated all feedback stores with {len(completed_tasks)} completed tasks")
+            with open(os.path.join(self.data_dir, 'success_patterns.json'), 'w') as f:
+                json.dump(success_patterns, f, indent=2)
+                
+            logger.info(f"Updated feedback data with {completed_count} completed tasks")
             
         except Exception as e:
             logger.error(f"Error storing completion data: {e}")
@@ -1619,45 +1590,36 @@ class LLMService:
             system_prompt_path = os.path.join('tasks', 'system_prompt.txt')
             if os.path.exists(system_prompt_path):
                 with open(system_prompt_path, 'r', encoding='utf-8') as f:
-                    system_prompt = f.read()
+                    system_prompt = f.read().strip()
             else:
                 logger.error("System prompt file not found")
                 raise FileNotFoundError("system_prompt.txt not found")
 
-            # Extract components from context
-            user_query = context.get('user_query', '')
-            repo_info = context.get('repo_info', {})
-            tasks = repo_info.get('tasks', [])
-            completed_tasks = repo_info.get('completed_tasks', [])
-            inbox_tasks = []  # Add this line
+            # Extract active tasks (not completed)
+            active_tasks = [t for t in context.get('repo_info', {}).get('tasks', []) 
+                           if not t.get('completed_at')]
             
-            # Try to read inbox tasks directly
-            try:
-                with open('tasks/inbox_tasks.json', 'r') as f:
-                    inbox_data = json.load(f)
-                    inbox_tasks = inbox_data.get('tasks', [])
-            except Exception as e:
-                logger.error(f"Error reading inbox tasks: {e}")
+            # Sort tasks by due date and priority
+            def sort_key(task):
+                # Default values if fields are missing
+                due_date = task.get('due') or '9999-12-31'
+                priority = task.get('priority', 999)
+                return (due_date, priority)
+                
+            active_tasks.sort(key=sort_key)
 
-            # Construct the full prompt
-            prompt = f"""
-{system_prompt}
+            # Format the prompt
+            prompt = f"""{system_prompt}
 
-Current Context:
-1. Active Tasks from Inbox:
-{json.dumps(inbox_tasks, indent=2)}
-
-2. Project Tasks:
-{json.dumps(tasks, indent=2)}
-
-3. Recently Completed Tasks:
-{json.dumps(completed_tasks[-5:], indent=2)}  # Only show last 5 completed tasks
+Current Active Tasks:
+{json.dumps(active_tasks, indent=2)}
 
 User Query:
-{user_query}
+{context.get('user_query', '')}
 
-Please provide a detailed response following the system prompt guidelines.
+Please provide a response following the system prompt format exactly.
 """
+            logger.debug(f"Constructed prompt: {prompt}")
             return prompt
 
         except Exception as e:
@@ -2025,7 +1987,11 @@ def main():
 def index():
     """Serve the main application page"""
     try:
-        return render_template('index.html')
+        system = initialize_system()
+        settings = {
+            'current_provider': system.llm_service.provider
+        }
+        return render_template('index.html', settings=settings)
     except Exception as e:
         logger.error(f"Error serving index page: {e}")
         return jsonify({
