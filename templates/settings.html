@@ -5,9 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kairos PM - Settings</title>
     <style>
-        /* Copy the existing styles from index.html and add: */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #1a1a1a;
+            border-bottom: 1px solid #333;
+        }
+
+        .logo {
+            font-size: 1.2em;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-link {
+            color: #b0b0b0;
+            text-decoration: none;
+            padding: 5px 10px;
+        }
+
+        .nav-link.active {
+            color: #ffffff;
+        }
+
         .settings-container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 30px auto;
             padding: 20px;
             background-color: #1a1a1a;
@@ -16,10 +53,11 @@
         }
 
         .provider-option {
-            padding: 15px;
-            margin: 10px 0;
+            padding: 20px;
+            margin: 15px 0;
+            background-color: #242424;
             border: 1px solid #333;
-            border-radius: 6px;
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -27,6 +65,12 @@
 
         .provider-option.active {
             border-color: #4CAF50;
+            background-color: #2a2a2a;
+        }
+
+        .provider-info h3 {
+            margin: 0 0 10px 0;
+            color: #ffffff;
         }
 
         .provider-status {
@@ -40,6 +84,33 @@
 
         .provider-status.not-configured {
             color: #ff4444;
+        }
+
+        .provider-button {
+            background-color: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+
+        .provider-button:not([disabled]):hover {
+            background-color: #444;
+        }
+
+        .provider-button[disabled] {
+            background-color: #2a2a2a;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        h2 {
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -70,7 +141,8 @@
                 </div>
                 <button onclick="switchProvider('{{ provider }}')" 
                         {% if not settings.api_keys_configured[provider] %}disabled{% endif %}
-                        {% if provider == settings.current_provider %}disabled{% endif %}>
+                        {% if provider == settings.current_provider %}disabled{% endif %}
+                        class="provider-button">
                     {% if provider == settings.current_provider %}
                         Current Provider
                     {% else %}
@@ -84,6 +156,7 @@
 
     <script>
         async function switchProvider(provider) {
+            console.log(`Attempting to switch to provider: ${provider}`);
             try {
                 const response = await fetch('/api/settings/provider', {
                     method: 'POST',
@@ -96,15 +169,16 @@
                 });
                 
                 const data = await response.json();
+                console.log('Response:', data);
+                
                 if (data.success) {
-                    // Update UI to reflect the change
-                    location.reload();  // Simple refresh for now
+                    location.reload();
                 } else {
                     alert(`Failed to switch provider: ${data.error}`);
                 }
             } catch (error) {
-                alert('Error switching provider');
                 console.error('Error:', error);
+                alert('Error switching provider');
             }
         }
     </script>

@@ -225,6 +225,17 @@ class GitHubActivityMonitor:
         try:
             logger.info("Starting task retrieval from GitHub")
             tasks = []
+            
+            # Read inbox tasks first
+            inbox_file = os.path.join('tasks', 'inbox_tasks.json')
+            if os.path.exists(inbox_file):
+                with open(inbox_file, 'r') as f:
+                    inbox_data = json.load(f)
+                    if isinstance(inbox_data, dict) and 'tasks' in inbox_data:
+                        tasks.extend(inbox_data['tasks'])
+                        logger.info(f"Added {len(inbox_data['tasks'])} tasks from inbox")
+
+            # Then read project files...
             tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
             
             # Get list of files, excluding directories and special files
@@ -1609,23 +1620,38 @@ class LLMService:
             if os.path.exists(system_prompt_path):
                 with open(system_prompt_path, 'r', encoding='utf-8') as f:
                     system_prompt = f.read()
+            else:
+                logger.error("System prompt file not found")
+                raise FileNotFoundError("system_prompt.txt not found")
 
             # Extract components from context
             user_query = context.get('user_query', '')
             repo_info = context.get('repo_info', {})
             tasks = repo_info.get('tasks', [])
-            feedback = repo_info.get('feedback', {})
+            completed_tasks = repo_info.get('completed_tasks', [])
+            inbox_tasks = []  # Add this line
+            
+            # Try to read inbox tasks directly
+            try:
+                with open('tasks/inbox_tasks.json', 'r') as f:
+                    inbox_data = json.load(f)
+                    inbox_tasks = inbox_data.get('tasks', [])
+            except Exception as e:
+                logger.error(f"Error reading inbox tasks: {e}")
 
             # Construct the full prompt
             prompt = f"""
 {system_prompt}
 
 Current Context:
-1. Active Tasks:
+1. Active Tasks from Inbox:
+{json.dumps(inbox_tasks, indent=2)}
+
+2. Project Tasks:
 {json.dumps(tasks, indent=2)}
 
-2. Recent Feedback:
-{json.dumps(feedback, indent=2)}
+3. Recently Completed Tasks:
+{json.dumps(completed_tasks[-5:], indent=2)}  # Only show last 5 completed tasks
 
 User Query:
 {user_query}
@@ -2042,15 +2068,37 @@ def handle_query():
         # Get repository contents including tasks and feedback
         system = initialize_system()
         repo_contents = system.github_monitor.get_tasks()
-        logger.info(f"Retrieved {len(repo_contents.get('tasks', []))} tasks from GitHub")
+        
+        # Debug logging for tasks
+        logger.info("=== Tasks Debug Information ===")
+        logger.info(f"Total tasks found: {len(repo_contents.get('tasks', []))}")
+        
+        # Log inbox tasks
+        try:
+            with open('tasks/inbox_tasks.json', 'r') as f:
+                inbox_tasks = json.load(f)
+                logger.info(f"Inbox tasks: {json.dumps(inbox_tasks, indent=2)}")
+        except Exception as e:
+            logger.error(f"Error reading inbox_tasks.json: {e}")
+            
+        # Log completed tasks
+        try:
+            with open('tasks/completed_tasks.json', 'r') as f:
+                completed_tasks = json.load(f)
+                logger.info(f"Completed tasks: {json.dumps(completed_tasks, indent=2)}")
+        except Exception as e:
+            logger.error(f"Error reading completed_tasks.json: {e}")
         
         # Aggregate context with feedback
         context = system.context_aggregator.aggregate_context(data['query'], repo_contents)
-        logger.info("Context aggregated successfully")
+        
+        # Debug logging for context
+        logger.info("=== Context Debug Information ===")
+        logger.info(f"Context being sent to LLM: {json.dumps(context, indent=2)}")
         
         # Generate suggestion using LLM
         suggestion = system.llm_service.generate_suggestion(context)
-        logger.info("Generated suggestion successfully")
+        logger.info(f"Generated suggestion: {suggestion}")
         
         # Collect feedback
         system.feedback_collector.collect_feedback(suggestion)
