@@ -1904,32 +1904,34 @@ def get_analysis_report():
             "error": str(e)
         }), 500
 
+# Add this near the top of the file, after imports
+_llm_service = None
+
+def get_llm_service():
+    """Get or create the singleton LLM service"""
+    global _llm_service
+    if _llm_service is None:
+        _llm_service = LLMService()
+    return _llm_service
+
 def initialize_system():
     """Initialize the core system components"""
     try:
+        # Use singleton LLM service
+        llm_service = get_llm_service()
+        
         # Initialize resource manager first
         resource_manager = GitHubResourceManager(
             github_token=os.getenv('GITHUB_TOKEN'),
             repo_name=os.getenv('GITHUB_REPO')
         )
         
-        # Initialize GitHub monitor with resource manager
+        # Initialize other components...
         github_monitor = GitHubActivityMonitor(resource_manager)
-        
-        # Initialize user interaction tracker
         user_tracker = UserInteractionTracker()
-        
-        # Initialize temporal analyzer
         temporal_analyzer = TemporalAnalysis()
-        
-        # Initialize feedback collector
         feedback_collector = FeedbackCollector(github_monitor, user_tracker, temporal_analyzer)
-        
-        # Initialize context aggregator
         context_aggregator = ContextAggregator(github_monitor)
-        
-        # Initialize LLM service
-        llm_service = LLMService()
         
         return SimpleNamespace(
             resource_manager=resource_manager,
@@ -2109,8 +2111,8 @@ def settings_page():
 def change_provider():
     """Change the LLM provider"""
     try:
-        # Initialize system components
-        system = initialize_system()
+        # Get the singleton LLM service
+        llm_service = get_llm_service()
         
         # Get the requested provider from the request
         data = request.get_json()
@@ -2124,12 +2126,14 @@ def change_provider():
         
         # Try to switch the provider
         try:
-            system.llm_service.set_provider(new_provider)
+            llm_service.set_provider(new_provider)
+            logger.info(f"Successfully switched to provider: {new_provider}")
             return jsonify({
                 'success': True,
                 'provider': new_provider
             })
         except ValueError as e:
+            logger.error(f"Failed to switch provider: {e}")
             return jsonify({
                 'success': False,
                 'error': str(e)
