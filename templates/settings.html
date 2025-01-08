@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kairos PM - Settings</title>
+    <style>
+        /* Copy the existing styles from index.html and add: */
+        .settings-container {
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+        }
+
+        .provider-option {
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #333;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .provider-option.active {
+            border-color: #4CAF50;
+        }
+
+        .provider-status {
+            font-size: 0.9em;
+            color: #808080;
+        }
+
+        .provider-status.configured {
+            color: #4CAF50;
+        }
+
+        .provider-status.not-configured {
+            color: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="logo">KAIROS project management</div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Dashboard</a>
+            <a href="/settings" class="nav-link active">Settings</a>
+        </div>
+    </nav>
+
+    <div class="settings-container">
+        <h2>LLM Provider Settings</h2>
+        <div class="provider-options">
+            {% for provider in settings.available_providers %}
+            <div class="provider-option {% if provider == settings.current_provider %}active{% endif %}"
+                 data-provider="{{ provider }}">
+                <div class="provider-info">
+                    <h3>{{ provider|title }}</h3>
+                    <div class="provider-status {% if settings.api_keys_configured[provider] %}configured{% else %}not-configured{% endif %}">
+                        {% if settings.api_keys_configured[provider] %}
+                            API Key Configured
+                        {% else %}
+                            API Key Not Configured
+                        {% endif %}
+                    </div>
+                </div>
+                <button onclick="switchProvider('{{ provider }}')" 
+                        {% if not settings.api_keys_configured[provider] %}disabled{% endif %}
+                        {% if provider == settings.current_provider %}disabled{% endif %}>
+                    {% if provider == settings.current_provider %}
+                        Current Provider
+                    {% else %}
+                        Switch to {{ provider|title }}
+                    {% endif %}
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        async function switchProvider(provider) {
+            try {
+                const response = await fetch('/api/settings/provider', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        provider: provider
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    // Update UI to reflect the change
+                    location.reload();  // Simple refresh for now
+                } else {
+                    alert(`Failed to switch provider: ${data.error}`);
+                }
+            } catch (error) {
+                alert('Error switching provider');
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html> 

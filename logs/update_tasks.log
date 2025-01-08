@@ -642,3 +642,341 @@ INFO:__main__:Updated tasks file with 7 tasks
 >>>>>>> 24dd75b
 INFO:__main__:Updated tasks file with 7 tasks
 INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+ERROR:__main__:Error getting Todoist tasks: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x10260d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error updating tasks: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x10260d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error in main execution: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x10260d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/socket.py", line 967, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x10260d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/util/retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x10260d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 140, in <module>
+    main()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 133, in main
+    task_manager.update_tasks()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 31, in update_tasks
+    current_tasks = self._get_todoist_tasks()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 65, in _get_todoist_tasks
+    tasks = self.api.get_tasks()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/todoist_api_python/api.py", line 60, in get_tasks
+    tasks = get(self._session, endpoint, self._token, kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/todoist_api_python/http_requests.py", line 18, in get
+    response = session.get(url, params=params, headers=create_headers(token=token))
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/adapters.py", line 700, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x10260d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+ERROR:__main__:Error getting Todoist tasks: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105d110c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error updating tasks: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105d110c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error in main execution: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105d110c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/socket.py", line 967, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x105d110c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/util/retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105d110c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 140, in <module>
+    main()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 133, in main
+    task_manager.update_tasks()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 31, in update_tasks
+    current_tasks = self._get_todoist_tasks()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 65, in _get_todoist_tasks
+    tasks = self.api.get_tasks()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/todoist_api_python/api.py", line 60, in get_tasks
+    tasks = get(self._session, endpoint, self._token, kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/todoist_api_python/http_requests.py", line 18, in get
+    response = session.get(url, params=params, headers=create_headers(token=token))
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/adapters.py", line 700, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105d110c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error getting Todoist tasks: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105b9d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error updating tasks: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105b9d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error in main execution: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105b9d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/socket.py", line 967, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x105b9d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/util/retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105b9d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 140, in <module>
+    main()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 133, in main
+    task_manager.update_tasks()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 31, in update_tasks
+    current_tasks = self._get_todoist_tasks()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 65, in _get_todoist_tasks
+    tasks = self.api.get_tasks()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/todoist_api_python/api.py", line 60, in get_tasks
+    tasks = get(self._session, endpoint, self._token, kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/todoist_api_python/http_requests.py", line 18, in get
+    response = session.get(url, params=params, headers=create_headers(token=token))
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/adapters.py", line 700, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105b9d0c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+ERROR:__main__:Error getting Todoist tasks: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105f910c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error updating tasks: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105f910c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+ERROR:__main__:Error in main execution: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105f910c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/socket.py", line 967, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x105f910c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/urllib3/util/retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105f910c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 140, in <module>
+    main()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 133, in main
+    task_manager.update_tasks()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 31, in update_tasks
+    current_tasks = self._get_todoist_tasks()
+  File "/Users/csainsbury/Documents/projectM/createTasks.py", line 65, in _get_todoist_tasks
+    tasks = self.api.get_tasks()
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/todoist_api_python/api.py", line 60, in get_tasks
+    tasks = get(self._session, endpoint, self._token, kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/todoist_api_python/http_requests.py", line 18, in get
+    response = session.get(url, params=params, headers=create_headers(token=token))
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/csainsbury/anaconda3/envs/projectM/lib/python3.10/site-packages/requests/adapters.py", line 700, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='api.todoist.com', port=443): Max retries exceeded with url: /rest/v2/tasks (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x105f910c0>: Failed to resolve 'api.todoist.com' ([Errno 8] nodename nor servname provided, or not known)"))
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 7 tasks
+INFO:__main__:Updated tasks file with 8 tasks
+INFO:__main__:Updated tasks file with 8 tasks
+INFO:__main__:Updated tasks file with 8 tasks

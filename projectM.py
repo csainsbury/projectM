@@ -780,15 +780,17 @@ class FeedbackCollector:
                 time_factor = min(1.0, 24.0 / max(1.0, completion_time))
                 base_score *= (0.5 + 0.5 * time_factor)
             
-            # Adjust for user interactions
-            for interaction in interactions:
-                action = interaction.get('action')
-                if action == 'accepted':
-                    base_score *= 1.2
-                elif action == 'rejected':
-                    base_score *= 0.8
-                elif action == 'modified':
-                    base_score *= 0.9
+            # Ensure interactions is a list of dicts
+            if isinstance(interactions, list):
+                for interaction in interactions:
+                    if isinstance(interaction, dict):
+                        action = interaction.get('action')
+                        if action == 'accepted':
+                            base_score *= 1.2
+                        elif action == 'rejected':
+                            base_score *= 0.8
+                        elif action == 'modified':
+                            base_score *= 0.9
             
             return min(1.0, max(0.0, base_score))
             
@@ -832,71 +834,108 @@ class FeedbackCollector:
             logger.error(f"Error collecting feedback: {e}")
             return {}
 
-    def _store_completion_data(self, task_history: List[dict]) -> None:
-        """Store completion data in all relevant locations"""
+    def _store_completion_data(self, task_history: List[dict]):
+        """Store completion data in a structured format"""
         try:
-            # Load completed tasks from tasks directory
-            completed_tasks = []
-            completed_file = os.path.join('tasks', 'completed_tasks.json')
-            if os.path.exists(completed_file):
-                with open(completed_file, 'r') as f:
-                    completed_tasks = json.load(f)
-
-            # Update success patterns
-            success_patterns = {
-                'completion_rate': len(completed_tasks) / len(task_history) if task_history else 0,
-                'completed_count': len(completed_tasks),
-                'last_updated': int(time.time())
+            # Ensure the data directory exists
+            os.makedirs(self.data_dir, exist_ok=True)
+            
+            # Initialize feedback data structure
+            feedback_data = {
+                'success_patterns': {
+                    'completion_rate': 0.0,
+                    'avg_completion_time': 0.0,
+                    'common_blockers': [],
+                    'successful_labels': []
+                },
+                'temporal_analysis': {},
+                'action_outcomes': []
             }
-            with open('data/success_patterns.json', 'w') as f:
-                json.dump(success_patterns, f, indent=2)
-
-            # Update temporal analysis
-            temporal_analysis = {
-                'completions_by_hour': self._analyze_completions_by_hour(completed_tasks),
-                'completions_by_day': self._analyze_completions_by_day(completed_tasks),
-                'last_updated': int(time.time())
-            }
-            with open('data/temporal_analysis.json', 'w') as f:
-                json.dump(temporal_analysis, f, indent=2)
-
-            # Append to action outcomes
-            with jsonlines.open('data/action_outcomes.jsonl', mode='a') as writer:
-                for task in completed_tasks:
-                    writer.write({
-                        'task_id': task['id'],
-                        'action': 'completed',
-                        'timestamp': task['completed_at'],
-                        'metadata': {
-                            'completion_time': task['completed_at'] - task.get('created_at', task['completed_at']),
-                            'labels': task.get('labels', []),
-                            'priority': task.get('priority')
-                        }
-                    })
-
+            
+            # Load existing data if available
+            try:
+                if os.path.exists(self.success_patterns_file):
+                    with open(self.success_patterns_file, 'r') as f:
+                        existing_patterns = json.load(f)
+                        feedback_data['success_patterns'].update(existing_patterns)
+            except json.JSONDecodeError:
+                logger.warning("Invalid JSON in success_patterns.json, using default")
+            
+            try:
+                if os.path.exists(self.temporal_analysis_file):
+                    with open(self.temporal_analysis_file, 'r') as f:
+                        feedback_data['temporal_analysis'] = json.load(f)
+            except json.JSONDecodeError:
+                logger.warning("Invalid JSON in temporal_analysis.json, using default")
+            
+            # Update completion data
+            completed_tasks = [t for t in task_history if isinstance(t, dict) and t.get('status') == 'completed']
+            total_tasks = len([t for t in task_history if isinstance(t, dict)])
+            
+            if total_tasks > 0:
+                feedback_data['success_patterns']['completion_rate'] = len(completed_tasks) / total_tasks
+            
+            # Save updated data
+            with open(self.success_patterns_file, 'w') as f:
+                json.dump(feedback_data['success_patterns'], f, indent=2)
+            
+            with open(self.temporal_analysis_file, 'w') as f:
+                json.dump(feedback_data['temporal_analysis'], f, indent=2)
+            
+            # Append to action outcomes file
+            if completed_tasks:
+                with jsonlines.open(self.action_outcomes_file, mode='a') as writer:
+                    for task in completed_tasks:
+                        writer.write({
+                            'task_id': task.get('id'),
+                            'completion_time': task.get('completed_at'),
+                            'success_factors': task.get('success_factors', []),
+                            'blockers': task.get('blockers', [])
+                        })
+            
             logger.info(f"Updated all feedback stores with {len(completed_tasks)} completed tasks")
-
+            
         except Exception as e:
             logger.error(f"Error storing completion data: {e}")
-            raise
 
-    def _analyze_completions_by_hour(self, completed_tasks: List[dict]) -> Dict[str, int]:
-        """Analyze completions by hour of day"""
-        hour_counts = {str(i): 0 for i in range(24)}
-        for task in completed_tasks:
-            if task.get('completed_at'):
-                hour = datetime.fromtimestamp(task['completed_at']).hour
-                hour_counts[str(hour)] += 1
-        return hour_counts
-
-    def _analyze_completions_by_day(self, completed_tasks: List[dict]) -> Dict[str, int]:
-        """Analyze completions by day of week"""
-        day_counts = {str(i): 0 for i in range(7)}
-        for task in completed_tasks:
-            if task.get('completed_at'):
-                day = datetime.fromtimestamp(task['completed_at']).weekday()
-                day_counts[str(day)] += 1
-        return day_counts
+    def _load_feedback_data(self) -> dict:
+        """Load feedback data from all sources"""
+        try:
+            feedback_data = {
+                'success_patterns': {},
+                'temporal_analysis': {},
+                'action_outcomes': []
+            }
+            
+            # Load success patterns
+            if os.path.exists(self.success_patterns_file):
+                try:
+                    with open(self.success_patterns_file, 'r') as f:
+                        feedback_data['success_patterns'] = json.load(f)
+                except json.JSONDecodeError:
+                    logger.warning("Invalid JSON in success_patterns.json, using default")
+            
+            # Load temporal analysis
+            if os.path.exists(self.temporal_analysis_file):
+                try:
+                    with open(self.temporal_analysis_file, 'r') as f:
+                        feedback_data['temporal_analysis'] = json.load(f)
+                except json.JSONDecodeError:
+                    logger.warning("Invalid JSON in temporal_analysis.json, using default")
+            
+            # Load action outcomes
+            if os.path.exists(self.action_outcomes_file):
+                try:
+                    with jsonlines.open(self.action_outcomes_file) as reader:
+                        feedback_data['action_outcomes'] = list(reader)
+                except Exception as e:
+                    logger.warning(f"Error reading action_outcomes.jsonl: {e}")
+            
+            return feedback_data
+            
+        except Exception as e:
+            logger.error(f"Error loading feedback data: {e}")
+            return feedback_data
 
     def calculate_outcome_metrics(self, task_history: List[dict], interactions: List[dict]) -> dict:
         """Calculate comprehensive outcome metrics"""
@@ -1157,6 +1196,24 @@ class FeedbackCollector:
             logger.error(f"Error calculating completion time: {e}")
             return 0.0
 
+    def update_feedback(self):
+        """Periodic update of feedback data"""
+        try:
+            # Get latest tasks
+            task_history = self.github_monitor.get_tasks().get("tasks", [])
+            
+            # Update completion data
+            self._store_completion_data(task_history)
+            
+            # Update temporal patterns
+            self.temporal_analyzer.analyze_patterns(task_history)
+            
+            # Log success
+            logger.info("Updated all feedback stores")
+            
+        except Exception as e:
+            logger.error(f"Error updating feedback: {e}")
+
 
 # ---------------------------------------------------------------------------
 # CLASS: FeedbackRepository
@@ -1284,10 +1341,59 @@ class FeedbackRepository:
 # CLASS: ContextAggregator
 # ---------------------------------------------------------------------------
 class ContextAggregator:
+    """Aggregates context from multiple sources"""
+    
     def __init__(self, github_monitor: GitHubActivityMonitor):
         self.github_monitor = github_monitor
         self.context_compressor = ContextCompressor(LLMService())
+        self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
         
+    def _load_feedback_data(self) -> List[dict]:
+        """Load recent feedback data from action outcomes file"""
+        try:
+            outcomes_file = os.path.join(self.data_dir, 'action_outcomes.jsonl')
+            outcomes = []
+            
+            if os.path.exists(outcomes_file):
+                with jsonlines.open(outcomes_file) as reader:
+                    outcomes = list(reader)
+            
+            return outcomes
+            
+        except Exception as e:
+            logger.error(f"Error loading feedback data: {e}")
+            return []
+    
+    def _load_success_patterns(self) -> dict:
+        """Load success patterns from JSON file"""
+        try:
+            patterns_file = os.path.join(self.data_dir, 'success_patterns.json')
+            
+            if os.path.exists(patterns_file):
+                with open(patterns_file, 'r') as f:
+                    return json.load(f)
+            
+            return {}
+            
+        except Exception as e:
+            logger.error(f"Error loading success patterns: {e}")
+            return {}
+    
+    def _load_temporal_analysis(self) -> dict:
+        """Load temporal analysis from JSON file"""
+        try:
+            analysis_file = os.path.join(self.data_dir, 'temporal_analysis.json')
+            
+            if os.path.exists(analysis_file):
+                with open(analysis_file, 'r') as f:
+                    return json.load(f)
+            
+            return {}
+            
+        except Exception as e:
+            logger.error(f"Error loading temporal analysis: {e}")
+            return {}
+
     def aggregate_context(self, query: str, repo_contents: dict) -> dict:
         """Aggregate context from various sources for the LLM"""
         try:
@@ -1344,222 +1450,193 @@ class ContextAggregator:
             logger.error(f"Error aggregating context: {e}")
             raise
 
-    def _load_feedback_data(self) -> list:
-        """Load action outcomes from feedback file"""
-        try:
-            outcomes = []
-            feedback_path = os.path.join('data', 'action_outcomes.jsonl')
-            if os.path.exists(feedback_path):
-                with jsonlines.open(feedback_path) as reader:
-                    for line in reader:
-                        outcomes.append(line)
-            return outcomes
-        except Exception as e:
-            logger.error(f"Error loading feedback data: {e}")
-            return []
-
-    def _load_success_patterns(self) -> dict:
-        """Load success patterns from feedback"""
-        try:
-            patterns_path = os.path.join('feedback', 'success_patterns.json')
-            if os.path.exists(patterns_path):
-                with open(patterns_path, 'r') as f:
-                    return json.load(f)
-            return {}
-        except Exception as e:
-            logger.error(f"Error loading success patterns: {e}")
-            return {}
-
-    def _load_temporal_analysis(self) -> dict:
-        """Load temporal analysis from feedback"""
-        try:
-            analysis_path = os.path.join('feedback', 'temporal_analysis.json')
-            if os.path.exists(analysis_path):
-                with open(analysis_path, 'r') as f:
-                    return json.load(f)
-            return {}
-        except Exception as e:
-            logger.error(f"Error loading temporal analysis: {e}")
-            return {}
-
-
 # ---------------------------------------------------------------------------
 # CLASS: LLMService (Gemini integration)
 # ---------------------------------------------------------------------------
 class LLMService:
-    """
-    Sends prompts to Google's Gemini model, retrieves suggestions, and parses them.
-    """
-    
-    def __init__(self, api_key=os.getenv('GOOGLE_API_KEY')):
-        self.api_key = api_key
-        self.gemini_endpoint = (
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key="
-            + self.api_key
-        )
-        self.rate_limiter = GeminiRateLimiter()
-        self.cache = {}  # Simple in-memory cache
+    """Service for interacting with LLM APIs"""
+    def __init__(self):
+        self.provider = 'gemini'  # Default to gemini
         
-    def _get_cached_response(self, prompt_text: str) -> Optional[str]:
-        """Get cached response if available and not expired"""
-        cache_key = hashlib.md5(prompt_text.encode()).hexdigest()
-        cached = self.cache.get(cache_key)
-        if cached:
-            timestamp, response = cached
-            if time.time() - timestamp < 3600:  # 1 hour cache
-                return response
-        return None
-
-    def _cache_response(self, prompt_text: str, response: str):
-        """Cache a response"""
-        cache_key = hashlib.md5(prompt_text.encode()).hexdigest()
-        self.cache[cache_key] = (time.time(), response)
-
-    def generate_suggestion(self, context: dict) -> str:
-        """Generate suggestion with improved context from patterns"""
-        try:
-            prompt_text = self._build_prompt(context)
+        # Load API keys from environment
+        self.api_key = os.getenv('GOOGLE_API_KEY')
+        self.anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+        self.openai_key = os.getenv('OPENAI_API_KEY')
+        
+        if not self.api_key:
+            raise ValueError("GOOGLE_API_KEY environment variable is not set")
             
-            # Check cache first
-            cached_response = self._get_cached_response(prompt_text)
-            if cached_response:
-                return cached_response
-
-            # Wait for rate limit capacity
-            if not self.rate_limiter.wait_for_capacity():
-                return "Error: Rate limit exceeded. Please try again later."
-
-            try:
-                response = self._make_api_call(prompt_text)
-                self._cache_response(prompt_text, response)
-                return response
-            finally:
-                self.rate_limiter.release_request()
-
-        except Exception as e:
-            logger.error(f"Error generating suggestion: {e}")
-            return f"Error generating suggestion: {str(e)}"
-
-    def _make_api_call(self, prompt_text: str) -> str:
-        """Make the actual API call to Gemini"""
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt_text}]
-            }]
+        # Set up endpoints
+        self.endpoints = {
+            'gemini': "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+            'anthropic': "https://api.anthropic.com/v1/messages",
+            'openai': "https://api.openai.com/v1/chat/completions"
         }
-
-        response = requests.post(self.gemini_endpoint, json=payload)
         
-        if response.status_code == 429:
-            logger.warning("Rate limit hit, backing off...")
-            time.sleep(5)  # Simple backoff
-            return "Rate limit reached. Please try again in a few moments."
+        self.rate_limiter = GeminiRateLimiter()
+    
+    def set_provider(self, provider: str):
+        """Change the LLM provider"""
+        if provider not in self.endpoints:
+            raise ValueError(f"Unsupported provider: {provider}")
             
-        response_data = response.json()
-        return self._extract_response_text(response_data)
-
-    # Add to LLMService class
-    def _summarize_patterns(self, feedback_data: dict) -> str:
-        """Extract and summarize key patterns from feedback data"""
-        try:
-            success_patterns = feedback_data.get('success_patterns', {})
-            temporal_data = feedback_data.get('temporal_analysis', {})
-            outcomes = feedback_data.get('action_outcomes', [])
+        # Check if API key is configured for the requested provider
+        if provider == 'anthropic' and not self.anthropic_key:
+            raise ValueError("ANTHROPIC_API_KEY not configured")
+        elif provider == 'openai' and not self.openai_key:
+            raise ValueError("OPENAI_API_KEY not configured")
             
-            # Extract completion patterns
-            completion_rate = success_patterns.get('completion_rate', 0)
-            avg_completion_time = success_patterns.get('avg_completion_time', 0)
-            
-            # Get optimal times
-            optimal_hours = temporal_data.get('optimal_times', {})
-            best_hour = max(optimal_hours.items(), key=lambda x: x[1])[0] if optimal_hours else 'unknown'
-            
-            # Get common blockers
-            blockers = success_patterns.get('common_blockers', [])
-            top_blockers = blockers[:2] if blockers else ['none identified']
-            
-            # Format summary
-            summary = f"""
-Key Completion Patterns:
-- Overall completion rate: {completion_rate:.0%}
-- Average completion time: {avg_completion_time:.1f} hours
-- Most successful time block: {best_hour}:00
-- Common blockers: {', '.join(top_blockers)}
-"""
-            return summary.strip()
-        except Exception as e:
-            logger.error(f"Error summarizing patterns: {e}")
-            return "Pattern analysis unavailable"
-
+        self.provider = provider
+        logger.info(f"Switched LLM provider to: {provider}")
+    
     def generate_suggestion(self, context: dict) -> str:
-        """Generate suggestion with improved context from patterns"""
+        """Generate suggestion using the selected LLM provider"""
+        try:
+            if self.provider == 'gemini':
+                return self._generate_gemini(context)
+            elif self.provider == 'anthropic':
+                return self._generate_anthropic(context)
+            elif self.provider == 'openai':
+                return self._generate_openai(context)
+            else:
+                raise ValueError(f"Unsupported provider: {self.provider}")
+                
+        except Exception as e:
+            logger.error(f"Error generating suggestion with {self.provider}: {e}")
+            raise
+    
+    def _generate_gemini(self, context: dict) -> str:
+        """Generate suggestion using Gemini"""
+        try:
+            # Construct the endpoint URL with API key
+            endpoint = f"{self.endpoints['gemini']}?key={self.api_key}"
+            
+            payload = {
+                "contents": [{
+                    "parts": [{"text": self._construct_prompt(context)}]
+                }]
+            }
+            
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(endpoint, json=payload, headers=headers)
+            
+            if response.status_code != 200:
+                raise Exception(f"Gemini API error: {response.text}")
+            
+            return self._parse_gemini_response(response.json())
+            
+        except Exception as e:
+            logger.error(f"Error in Gemini API call: {e}")
+            raise
+    
+    def _generate_anthropic(self, context: dict) -> str:
+        """Generate suggestion using Anthropic/Claude"""
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': self.anthropic_key,
+            'anthropic-version': '2023-06-01'
+        }
+        
+        payload = {
+            "messages": [{
+                "role": "user",
+                "content": self._construct_prompt(context)
+            }],
+            "model": "claude-3-opus-20240229",
+            "max_tokens": 1024
+        }
+        
+        response = requests.post(self.endpoints['anthropic'], json=payload, headers=headers)
+        
+        if response.status_code != 200:
+            raise Exception(f"Anthropic API error: {response.text}")
+        
+        return self._parse_anthropic_response(response.json())
+    
+    def _generate_openai(self, context: dict) -> str:
+        """Generate suggestion using OpenAI"""
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.openai_key}'
+        }
+        
+        payload = {
+            "model": "gpt-4-turbo-preview",
+            "messages": [{
+                "role": "user",
+                "content": self._construct_prompt(context)
+            }],
+            "max_tokens": 1024
+        }
+        
+        response = requests.post(self.endpoints['openai'], json=payload, headers=headers)
+        
+        if response.status_code != 200:
+            raise Exception(f"OpenAI API error: {response.text}")
+        
+        return self._parse_openai_response(response.json())
+    
+    def _parse_gemini_response(self, response_data: dict) -> str:
+        """Parse Gemini API response"""
+        if 'candidates' in response_data:
+            for candidate in response_data['candidates']:
+                if 'content' in candidate:
+                    content = candidate['content']
+                    if 'parts' in content:
+                        for part in content['parts']:
+                            if 'text' in part:
+                                return part['text']
+        raise ValueError("Unexpected Gemini response structure")
+    
+    def _parse_anthropic_response(self, response_data: dict) -> str:
+        """Parse Anthropic API response"""
+        if 'content' in response_data:
+            return response_data['content'][0]['text']
+        raise ValueError("Unexpected Anthropic response structure")
+    
+    def _parse_openai_response(self, response_data: dict) -> str:
+        """Parse OpenAI API response"""
+        if 'choices' in response_data:
+            return response_data['choices'][0]['message']['content']
+        raise ValueError("Unexpected OpenAI response structure")
+
+    def _construct_prompt(self, context: dict) -> str:
+        """Construct the prompt for LLM from context"""
         try:
             # Get system prompt
             system_prompt = ""
-            try:
-                with open('tasks/system_prompt.txt', 'r') as f:
-                    system_prompt = f.read().strip()
-            except Exception as e:
-                logger.error(f"Error reading system prompt: {e}")
-                system_prompt = "Follow standard task prioritization protocols."
+            system_prompt_path = os.path.join('tasks', 'system_prompt.txt')
+            if os.path.exists(system_prompt_path):
+                with open(system_prompt_path, 'r', encoding='utf-8') as f:
+                    system_prompt = f.read()
 
-            user_query = context.get("user_query", "No user query provided.")
-            tasks = context.get('repo_info', {}).get('tasks', [])
-            completed_tasks = context.get('repo_info', {}).get('completed_tasks', [])
-            feedback_data = context.get('repo_info', {}).get('feedback', {})
+            # Extract components from context
+            user_query = context.get('user_query', '')
+            repo_info = context.get('repo_info', {})
+            tasks = repo_info.get('tasks', [])
+            feedback = repo_info.get('feedback', {})
 
-            # Generate pattern summary
-            pattern_summary = self._summarize_patterns(feedback_data)
-
-            prompt_text = f"""System Instructions:
+            # Construct the full prompt
+            prompt = f"""
 {system_prompt}
 
-Analysis of Past Task Patterns:
-{pattern_summary}
-
-User Query: {user_query}
-
-Available Tasks:
+Current Context:
+1. Active Tasks:
 {json.dumps(tasks, indent=2)}
 
-Completed Tasks ({len(completed_tasks)} total):
-{json.dumps(completed_tasks, indent=2)}
+2. Recent Feedback:
+{json.dumps(feedback, indent=2)}
 
-Please provide a suggestion that:
-1. Considers the identified completion patterns and optimal times
-2. Addresses any known blockers
-3. Responds directly to: "{user_query}"
+User Query:
+{user_query}
+
+Please provide a detailed response following the system prompt guidelines.
 """
-            payload = {
-                "contents": [
-                    {
-                        "parts": [
-                            {"text": prompt_text}
-                        ]
-                    }
-                ]
-            }
-
-            response = requests.post(self.gemini_endpoint, json=payload)
-            response_data = response.json()
-
-            # Extract the text from Gemini's response
-            if 'candidates' in response_data:
-                for candidate in response_data['candidates']:
-                    if 'content' in candidate:
-                        content = candidate['content']
-                        if 'parts' in content:
-                            for part in content['parts']:
-                                if 'text' in part:
-                                    return part['text']
-
-            # If we couldn't find the text in the expected structure, return the raw response
-            logger.warning("Unexpected response structure from Gemini")
-            return str(response_data)
+            return prompt
 
         except Exception as e:
-            logger.error(f"Error generating suggestion: {e}")
-            return f"Error generating suggestion: {str(e)}"
+            logger.error(f"Error constructing prompt: {e}")
+            raise
 
 class ContextCompressor:
     """Compresses large context documents using LLM summarization"""
@@ -1658,37 +1735,22 @@ If the content was truncated, please add: '[Content truncated for length]'
             return file_path  # Return original if compression fails
 
 def ensure_directories():
-    """Create necessary directories and files"""
-    # Create directories
+    """Create necessary directories and initialize files if needed"""
     directories = [
         'tasks',
         'tasks/reduced_context',
-        'tasks/uncompressed_context',
         'data',
-        'feedback',
-        'templates'
+        'feedback'
     ]
     
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
         logger.info(f"Ensured directory exists: {directory}")
-    
-    # Ensure system prompt exists
-    ensure_system_prompt()
-    
-    # Ensure JSON files exist
-    json_files = {
-        'tasks/completed_tasks.json': '[]',
-        'tasks/inbox_tasks.json': '[]',
-        'data/success_patterns.json': '{}',
-        'data/temporal_analysis.json': '{}'
-    }
-    
-    for file_path, default_content in json_files.items():
-        if not os.path.exists(file_path):
-            with open(file_path, 'w') as f:
-                f.write(default_content)
-            logger.info(f"Created default {file_path}")
+
+    # Initialize feedback file if it doesn't exist
+    if not os.path.exists(ACTION_OUTCOMES_FILE):
+        with jsonlines.open(ACTION_OUTCOMES_FILE, mode='w') as writer:
+            writer.write({})  # Write empty object as initial state
 
 def ensure_system_prompt():
     """Ensure system_prompt.txt exists with default content"""
@@ -1999,6 +2061,68 @@ def handle_query():
         })
     except Exception as e:
         logger.error(f"Error processing query: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/settings')
+def settings_page():
+    """Serve the settings page"""
+    try:
+        # Initialize system components
+        system = initialize_system()
+        
+        # Get current LLM settings
+        current_settings = {
+            'current_provider': system.llm_service.provider,
+            'available_providers': ['gemini', 'anthropic', 'openai'],
+            'api_keys_configured': {
+                'gemini': bool(os.getenv('GOOGLE_API_KEY')),
+                'anthropic': bool(os.getenv('ANTHROPIC_API_KEY')),
+                'openai': bool(os.getenv('OPENAI_API_KEY'))
+            }
+        }
+        return render_template('settings.html', settings=current_settings)
+    except Exception as e:
+        logger.error(f"Error serving settings page: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/settings/provider', methods=['POST'])
+def change_provider():
+    """Change the LLM provider"""
+    try:
+        # Initialize system components
+        system = initialize_system()
+        
+        # Get the requested provider from the request
+        data = request.get_json()
+        if not data or 'provider' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'No provider specified'
+            }), 400
+            
+        new_provider = data['provider']
+        
+        # Try to switch the provider
+        try:
+            system.llm_service.set_provider(new_provider)
+            return jsonify({
+                'success': True,
+                'provider': new_provider
+            })
+        except ValueError as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error changing provider: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
