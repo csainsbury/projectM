@@ -82,13 +82,15 @@
       "created_at": 1736268278
     },
     {
-      "id": "8751089813",
-      "content": "new task",
+      "id": "8751279247",
+      "content": "order glasses [30m]",
       "description": "",
-      "priority": 1,
-      "due": "2025-01-08",
-      "labels": [],
-      "created_at": 1736366776
+      "priority": 4,
+      "due": "2025-01-09",
+      "labels": [
+        "reclaim"
+      ],
+      "created_at": 1736370520
     }
   ]
 }
