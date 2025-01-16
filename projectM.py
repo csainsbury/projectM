@@ -35,7 +35,7 @@ from github import Github
 from github.Repository import Repository
 from dotenv import load_dotenv
 from functools import lru_cache
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Callable  # Add Callable here
 import logging
 import sys
 from flask import Flask, render_template, request, jsonify
@@ -530,33 +530,200 @@ class UserInteractionTracker:
 # ---------------------------------------------------------------------------
 # CLASS: TemporalAnalysis
 # ---------------------------------------------------------------------------
-class TemporalAnalysis:
+class AnalysisBase:
+    """Base class for common analysis patterns"""
+    
+    def _calculate_completion_rate(self, tasks: List[dict]) -> float:
+        """Calculate task completion rate"""
+        try:
+            if not tasks:
+                return 0.0
+            completed = len([t for t in tasks if t.get('completed_at')])
+            return completed / len(tasks)
+        except Exception as e:
+            logger.error(f"Error calculating completion rate: {e}")
+            return 0.0
+            
+    def _calculate_avg_completion_time(self, tasks: List[dict]) -> float:
+        """Calculate average completion time in hours"""
+        try:
+            completion_times = []
+            for task in tasks:
+                if task.get('completed_at') and task.get('created_at'):
+                    time_taken = (task['completed_at'] - task['created_at']) / 3600
+                    completion_times.append(time_taken)
+            return sum(completion_times) / len(completion_times) if completion_times else 0.0
+        except Exception as e:
+            logger.error(f"Error calculating average completion time: {e}")
+            return 0.0
+
+class TemporalAnalysis(AnalysisBase):
     """Analyzes time-based patterns in task completion and project phases"""
     
-    def analyze_patterns(self, task_history: List[dict]) -> dict:
-        """Analyze time-based patterns in task completion"""
+    def __init__(self):
+        self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        self.analysis_file = os.path.join(self.data_dir, 'temporal_analysis.json')
+        os.makedirs(self.data_dir, exist_ok=True)
+        
+    def analyze_patterns(self, tasks: List[dict]) -> dict:
+        """Analyze temporal patterns in task completion"""
         try:
-            # Get basic temporal metrics
-            basic_metrics = self._analyze_basic_patterns(task_history)
+            # Get basic patterns
+            patterns = self._analyze_basic_patterns(tasks)
             
-            # Find optimal suggestion times
-            optimal_times = self._find_optimal_suggestion_times(task_history)
+            # Add additional analysis
+            patterns.update({
+                'optimal_times': self._analyze_optimal_times(tasks),
+                'day_patterns': self._analyze_day_patterns(tasks),
+                'recent_trends': self._analyze_trends(tasks)
+            })
             
-            # Analyze day patterns
-            day_patterns = self._analyze_day_patterns(task_history)
+            # Save analysis results
+            self._save_analysis(patterns)
             
-            # Analyze project phase correlation
-            phase_patterns = self._analyze_project_phase_correlation(task_history)
+            return patterns
             
-            return {
-                **basic_metrics,
-                "optimal_times": optimal_times,
-                "day_patterns": day_patterns,
-                "phase_patterns": phase_patterns
-            }
         except Exception as e:
             logger.error(f"Error analyzing temporal patterns: {e}")
-            return {}
+            return {
+                'completion_by_hour': {},
+                'completion_by_day': {},
+                'avg_completion_time': 0.0,
+                'optimal_times': {},
+                'day_patterns': {},
+                'recent_trends': []
+            }
+
+    def _analyze_optimal_times(self, tasks: List[dict]) -> dict:
+        """Analyze optimal times for task completion"""
+        try:
+            optimal_times = {
+                'hourly_completion': {},
+                'peak_hours': [],
+                'efficiency_scores': {}
+            }
+            
+            # Analyze hourly completion patterns
+            for task in tasks:
+                if task.get('completed_at'):
+                    hour = datetime.fromtimestamp(task['completed_at']).hour
+                    optimal_times['hourly_completion'].setdefault(hour, {
+                        'count': 0,
+                        'total_duration': 0,
+                        'success_rate': 0
+                    })
+                    
+                    optimal_times['hourly_completion'][hour]['count'] += 1
+                    
+                    if task.get('created_at'):
+                        duration = task['completed_at'] - task['created_at']
+                        optimal_times['hourly_completion'][hour]['total_duration'] += duration
+            
+            # Calculate efficiency scores and identify peak hours
+            total_completions = sum(h['count'] for h in optimal_times['hourly_completion'].values())
+            if total_completions > 0:
+                for hour, stats in optimal_times['hourly_completion'].items():
+                    avg_duration = stats['total_duration'] / stats['count'] if stats['count'] > 0 else 0
+                    completion_ratio = stats['count'] / total_completions
+                    
+                    efficiency_score = completion_ratio * (1 / (avg_duration + 1))  # Avoid div by zero
+                    optimal_times['efficiency_scores'][hour] = efficiency_score
+                    
+                    if efficiency_score > 0.15:  # Threshold for peak hours
+                        optimal_times['peak_hours'].append(hour)
+            
+            return optimal_times
+            
+        except Exception as e:
+            logger.error(f"Error analyzing optimal times: {e}")
+            return {'hourly_completion': {}, 'peak_hours': [], 'efficiency_scores': {}}
+
+    def _analyze_day_patterns(self, tasks: List[dict]) -> dict:
+        """Analyze patterns in day-of-week completion"""
+        try:
+            day_patterns = {
+                'daily_stats': {},
+                'optimal_days': [],
+                'workload_distribution': {}
+            }
+            
+            # Analyze daily completion patterns
+            for task in tasks:
+                if task.get('completed_at'):
+                    day = datetime.fromtimestamp(task['completed_at']).strftime('%A')
+                    day_patterns['daily_stats'].setdefault(day, {
+                        'completed': 0,
+                        'total_duration': 0,
+                        'avg_completion_time': 0
+                    })
+                    
+                    day_patterns['daily_stats'][day]['completed'] += 1
+                    
+                    if task.get('created_at'):
+                        duration = (task['completed_at'] - task['created_at']) / 3600  # hours
+                        day_patterns['daily_stats'][day]['total_duration'] += duration
+            
+            # Calculate averages and identify optimal days
+            for day, stats in day_patterns['daily_stats'].items():
+                if stats['completed'] > 0:
+                    stats['avg_completion_time'] = stats['total_duration'] / stats['completed']
+                    
+                    # Consider a day optimal if average completion time is below overall average
+                    if stats['avg_completion_time'] < self._calculate_avg_completion_time(tasks):
+                        day_patterns['optimal_days'].append(day)
+                
+                # Calculate workload distribution
+                total_completed = sum(d['completed'] for d in day_patterns['daily_stats'].values())
+                if total_completed > 0:
+                    day_patterns['workload_distribution'][day] = stats['completed'] / total_completed
+            
+            return day_patterns
+            
+        except Exception as e:
+            logger.error(f"Error analyzing day patterns: {e}")
+            return {'daily_stats': {}, 'optimal_days': [], 'workload_distribution': {}}
+
+    def _analyze_trends(self, tasks: List[dict]) -> List[dict]:
+        """Analyze recent trends in task completion"""
+        try:
+            now = datetime.now()
+            recent_tasks = [t for t in tasks if t.get('completed_at') and 
+                          now - datetime.fromtimestamp(t['completed_at']) < timedelta(days=30)]
+            
+            trend_data = []
+            if recent_tasks:
+                # Group by week
+                weekly_data = {}
+                for task in recent_tasks:
+                    completion_date = datetime.fromtimestamp(task['completed_at'])
+                    week_num = completion_date.isocalendar()[1]
+                    
+                    weekly_data.setdefault(week_num, []).append(task)
+                
+                # Calculate weekly metrics
+                for week, week_tasks in weekly_data.items():
+                    trend_data.append({
+                        "week": week,
+                        "completion_count": len(week_tasks),
+                        "avg_completion_time": self._calculate_avg_completion_time(week_tasks),
+                        "success_rate": self._calculate_completion_rate(week_tasks),
+                        "velocity": len(week_tasks) / 7  # tasks per day
+                    })
+            
+            return sorted(trend_data, key=lambda x: x["week"])
+            
+        except Exception as e:
+            logger.error(f"Error analyzing trends: {e}")
+            return []
+
+    def _save_analysis(self, patterns: dict):
+        """Save temporal analysis results"""
+        try:
+            with open(self.analysis_file, 'w') as f:
+                json.dump(patterns, f, indent=2)
+                
+        except Exception as e:
+            logger.error(f"Error saving temporal analysis: {e}")
 
     def _find_optimal_suggestion_times(self, task_history: List[dict]) -> dict:
         """Find optimal times for task suggestions based on success rates"""
@@ -760,6 +927,52 @@ class TemporalAnalysis:
         
         return duration_stats
 
+    def _analyze_basic_patterns(self, tasks: List[dict]) -> dict:
+        """Analyze basic temporal patterns in task completion"""
+        try:
+            patterns = {
+                'completion_by_hour': {},
+                'completion_by_day': {},
+                'avg_completion_time': 0.0
+            }
+            
+            completion_times = []
+            for task in tasks:
+                created = task.get('created_at')
+                completed = task.get('completed_at')
+                
+                if created and completed:
+                    # Convert timestamps to datetime
+                    if isinstance(created, (int, float)):
+                        created = datetime.fromtimestamp(created)
+                    if isinstance(completed, (int, float)):
+                        completed = datetime.fromtimestamp(completed)
+                    
+                    # Record completion hour and day
+                    hour = completed.hour
+                    day = completed.strftime('%A')
+                    
+                    patterns['completion_by_hour'][hour] = patterns['completion_by_hour'].get(hour, 0) + 1
+                    patterns['completion_by_day'][day] = patterns['completion_by_day'].get(day, 0) + 1
+                    
+                    # Calculate completion time in hours
+                    completion_time = (completed - created).total_seconds() / 3600
+                    completion_times.append(completion_time)
+            
+            # Calculate average completion time
+            if completion_times:
+                patterns['avg_completion_time'] = sum(completion_times) / len(completion_times)
+            
+            return patterns
+            
+        except Exception as e:
+            logger.error(f"Error analyzing basic patterns: {e}")
+            return {
+                'completion_by_hour': {},
+                'completion_by_day': {},
+                'avg_completion_time': 0.0
+            }
+
 
 # ---------------------------------------------------------------------------
 # CLASS: FeedbackCollector
@@ -853,9 +1066,8 @@ class FeedbackCollector:
             
             # Get completed tasks
             completed_tasks = []
-            completed_file = os.path.join('tasks', 'completed_tasks.json')
-            if os.path.exists(completed_file):
-                with open(completed_file, 'r') as f:
+            if os.path.exists(self.completed_tasks_file):
+                with open(self.completed_tasks_file, 'r') as f:
                     completed_tasks = json.load(f)
             
             # Calculate metrics
@@ -872,7 +1084,7 @@ class FeedbackCollector:
                 'successful_labels': self._analyze_successful_labels(completed_tasks)
             }
             
-            with open(os.path.join(self.data_dir, 'success_patterns.json'), 'w') as f:
+            with open(self.success_patterns_file, 'w') as f:
                 json.dump(success_patterns, f, indent=2)
                 
             logger.info(f"Updated feedback data with {completed_count} completed tasks")
@@ -884,26 +1096,10 @@ class FeedbackCollector:
         """Load feedback data from all sources"""
         try:
             feedback_data = {
-                'success_patterns': {},
-                'temporal_analysis': {},
+                'success_patterns': self._load_success_patterns(),
+                'temporal_analysis': self._load_temporal_analysis(),  # Use the new method
                 'action_outcomes': []
             }
-            
-            # Load success patterns
-            if os.path.exists(self.success_patterns_file):
-                try:
-                    with open(self.success_patterns_file, 'r') as f:
-                        feedback_data['success_patterns'] = json.load(f)
-                except json.JSONDecodeError:
-                    logger.warning("Invalid JSON in success_patterns.json, using default")
-            
-            # Load temporal analysis
-            if os.path.exists(self.temporal_analysis_file):
-                try:
-                    with open(self.temporal_analysis_file, 'r') as f:
-                        feedback_data['temporal_analysis'] = json.load(f)
-                except json.JSONDecodeError:
-                    logger.warning("Invalid JSON in temporal_analysis.json, using default")
             
             # Load action outcomes
             if os.path.exists(self.action_outcomes_file):
@@ -917,7 +1113,11 @@ class FeedbackCollector:
             
         except Exception as e:
             logger.error(f"Error loading feedback data: {e}")
-            return feedback_data
+            return {
+                'success_patterns': self._load_success_patterns(),
+                'temporal_analysis': self._load_temporal_analysis(),
+                'action_outcomes': []
+            }
 
     def calculate_outcome_metrics(self, task_history: List[dict], interactions: List[dict]) -> dict:
         """Calculate comprehensive outcome metrics"""
@@ -1196,6 +1396,41 @@ class FeedbackCollector:
         except Exception as e:
             logger.error(f"Error updating feedback: {e}")
 
+    def _analyze_blockers(self, completed_tasks: List[dict]) -> List[str]:
+        """Analyze common blockers from completed tasks"""
+        try:
+            blockers = {}
+            for task in completed_tasks:
+                task_blockers = task.get('blockers', [])
+                for blocker in task_blockers:
+                    blockers[blocker] = blockers.get(blocker, 0) + 1
+            
+            # Sort by frequency and return top blockers
+            sorted_blockers = sorted(blockers.items(), key=lambda x: x[1], reverse=True)
+            return [b[0] for b in sorted_blockers[:5]]  # Return top 5 blockers
+            
+        except Exception as e:
+            logger.error(f"Error analyzing blockers: {e}")
+            return []
+
+    def _analyze_successful_labels(self, completed_tasks: List[dict]) -> List[str]:
+        """Analyze labels from successfully completed tasks"""
+        try:
+            labels = {}
+            for task in completed_tasks:
+                if task.get('completed_at'):  # Only consider actually completed tasks
+                    task_labels = task.get('labels', [])
+                    for label in task_labels:
+                        labels[label] = labels.get(label, 0) + 1
+            
+            # Sort by frequency and return top labels
+            sorted_labels = sorted(labels.items(), key=lambda x: x[1], reverse=True)
+            return [l[0] for l in sorted_labels[:5]]  # Return top 5 labels
+            
+        except Exception as e:
+            logger.error(f"Error analyzing successful labels: {e}")
+            return []
+
 
 # ---------------------------------------------------------------------------
 # CLASS: FeedbackRepository
@@ -1327,54 +1562,87 @@ class ContextAggregator:
     
     def __init__(self, github_monitor: GitHubActivityMonitor):
         self.github_monitor = github_monitor
-        self.context_compressor = ContextCompressor(LLMService())
-        self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        # Use the singleton LLM service instead of creating a new one
+        self.context_compressor = ContextCompressor(get_llm_service())
         
-    def _load_feedback_data(self) -> List[dict]:
-        """Load recent feedback data from action outcomes file"""
+        # Initialize file paths
+        self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        self.tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
+        
+        # Define file paths
+        self.success_patterns_file = os.path.join(self.data_dir, 'success_patterns.json')
+        self.temporal_analysis_file = os.path.join(self.data_dir, 'temporal_analysis.json')
+        self.action_outcomes_file = os.path.join(self.data_dir, 'action_outcomes.jsonl')
+        
+        # Ensure directories exist
+        os.makedirs(self.data_dir, exist_ok=True)
+
+    def _load_success_patterns(self) -> dict:
+        """Load success patterns from file"""
         try:
-            outcomes_file = os.path.join(self.data_dir, 'action_outcomes.jsonl')
-            outcomes = []
+            if os.path.exists(self.success_patterns_file):
+                with open(self.success_patterns_file, 'r') as f:
+                    return json.load(f)
+            return {
+                'completion_rate': 0.0,
+                'avg_completion_time': 0.0,
+                'common_blockers': [],
+                'successful_labels': []
+            }
+        except Exception as e:
+            logger.error(f"Error loading success patterns: {e}")
+            return {
+                'completion_rate': 0.0,
+                'avg_completion_time': 0.0,
+                'common_blockers': [],
+                'successful_labels': []
+            }
+
+    def _load_temporal_analysis(self) -> dict:
+        """Load temporal analysis data from file"""
+        try:
+            if os.path.exists(self.temporal_analysis_file):
+                with open(self.temporal_analysis_file, 'r') as f:
+                    return json.load(f)
+            return {
+                'optimal_times': {},
+                'day_patterns': {},
+                'recent_trends': []
+            }
+        except Exception as e:
+            logger.error(f"Error loading temporal analysis: {e}")
+            return {
+                'optimal_times': {},
+                'day_patterns': {},
+                'recent_trends': []
+            }
+
+    def _load_feedback_data(self) -> dict:
+        """Load feedback data from all sources"""
+        try:
+            feedback_data = {
+                'success_patterns': self._load_success_patterns(),
+                'temporal_analysis': self._load_temporal_analysis(),  # Use the new method
+                'action_outcomes': []
+            }
             
-            if os.path.exists(outcomes_file):
-                with jsonlines.open(outcomes_file) as reader:
-                    outcomes = list(reader)
+            # Load action outcomes
+            if os.path.exists(self.action_outcomes_file):
+                try:
+                    with jsonlines.open(self.action_outcomes_file) as reader:
+                        feedback_data['action_outcomes'] = list(reader)
+                except Exception as e:
+                    logger.warning(f"Error reading action_outcomes.jsonl: {e}")
             
-            return outcomes
+            return feedback_data
             
         except Exception as e:
             logger.error(f"Error loading feedback data: {e}")
-            return []
-    
-    def _load_success_patterns(self) -> dict:
-        """Load success patterns from JSON file"""
-        try:
-            patterns_file = os.path.join(self.data_dir, 'success_patterns.json')
-            
-            if os.path.exists(patterns_file):
-                with open(patterns_file, 'r') as f:
-                    return json.load(f)
-            
-            return {}
-            
-        except Exception as e:
-            logger.error(f"Error loading success patterns: {e}")
-            return {}
-    
-    def _load_temporal_analysis(self) -> dict:
-        """Load temporal analysis from JSON file"""
-        try:
-            analysis_file = os.path.join(self.data_dir, 'temporal_analysis.json')
-            
-            if os.path.exists(analysis_file):
-                with open(analysis_file, 'r') as f:
-                    return json.load(f)
-            
-            return {}
-            
-        except Exception as e:
-            logger.error(f"Error loading temporal analysis: {e}")
-            return {}
+            return {
+                'success_patterns': self._load_success_patterns(),
+                'temporal_analysis': self._load_temporal_analysis(),
+                'action_outcomes': []
+            }
 
     def aggregate_context(self, query: str, repo_contents: dict) -> dict:
         """Aggregate context from various sources for the LLM"""
@@ -1382,41 +1650,32 @@ class ContextAggregator:
             # Get current tasks
             tasks = repo_contents.get("tasks", [])
             
-            # Load completed tasks with reduced context
-            completed_tasks = []
-            completed_file = os.path.join('tasks', 'completed_tasks.json')
-            if os.path.exists(completed_file):
-                with open(completed_file, 'r') as f:
-                    completed_tasks = json.load(f)
-            
             # Process any large context documents
             processed_contents = {}
             for path, content in repo_contents.get("raw_contents", {}).items():
-                if path.endswith('.txt') and len(content) > 4000:
-                    # Save content to temporary file
-                    temp_path = os.path.join('tasks', os.path.basename(path))
-                    with open(temp_path, 'w', encoding='utf-8') as f:
-                        f.write(content)
+                try:
+                    # Save content to file if it's not already on disk
+                    file_path = os.path.join('tasks', os.path.basename(path))
+                    if not os.path.exists(file_path):
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(content)
                     
-                    # Get reduced version
-                    reduced_path = self.context_compressor.get_reduced_version(temp_path)
+                    # Get compressed version if needed
+                    compressed_path = self.context_compressor.get_or_create_compressed_version(file_path)
                     
-                    # Read reduced content
-                    with open(reduced_path, 'r', encoding='utf-8') as f:
+                    # Read the appropriate version
+                    with open(compressed_path, 'r', encoding='utf-8') as f:
                         processed_contents[path] = f.read()
-                    
-                    # Clean up temp file
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
-                else:
-                    processed_contents[path] = content
+                        
+                except Exception as e:
+                    logger.error(f"Error processing content for {path}: {e}")
+                    processed_contents[path] = content  # Use original if compression fails
             
-            # Build context dictionary with reduced content
+            # Build context dictionary
             context = {
                 "user_query": query,
                 "repo_info": {
                     "tasks": tasks,
-                    "completed_tasks": completed_tasks,
                     "raw_contents": processed_contents,
                     "feedback": {
                         "action_outcomes": self._load_feedback_data(),
@@ -1438,24 +1697,30 @@ class ContextAggregator:
 class LLMService:
     """Service for interacting with LLM APIs"""
     def __init__(self):
-        self.provider = 'gemini'  # Default to gemini
+        # Change default provider to anthropic
+        self.provider = 'anthropic'
         
         # Load API keys from environment
-        self.api_key = os.getenv('GOOGLE_API_KEY')
         self.anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+        self.gemini_key = os.getenv('GOOGLE_API_KEY')
         self.openai_key = os.getenv('OPENAI_API_KEY')
         
-        if not self.api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable is not set")
-            
+        # Verify default provider's API key is available
+        if not self.anthropic_key:
+            logger.warning("ANTHROPIC_API_KEY not set, falling back to Gemini")
+            self.provider = 'gemini'
+            if not self.gemini_key:
+                raise ValueError("Neither ANTHROPIC_API_KEY nor GOOGLE_API_KEY is set")
+        
         # Set up endpoints
         self.endpoints = {
-            'gemini': "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
             'anthropic': "https://api.anthropic.com/v1/messages",
+            'gemini': "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
             'openai': "https://api.openai.com/v1/chat/completions"
         }
         
-        self.rate_limiter = GeminiRateLimiter()
+        self.rate_limiter = GeminiRateLimiter()  # We'll keep this for Gemini fallback
+        self.rate_limit_handler = RateLimitHandler()
     
     def set_provider(self, provider: str):
         """Change the LLM provider"""
@@ -1472,26 +1737,32 @@ class LLMService:
         logger.info(f"Switched LLM provider to: {provider}")
     
     def generate_suggestion(self, context: dict) -> str:
-        """Generate suggestion using the selected LLM provider"""
+        """Generate suggestion using the selected LLM provider with rate limit handling"""
         try:
-            if self.provider == 'gemini':
-                return self._generate_gemini(context)
-            elif self.provider == 'anthropic':
-                return self._generate_anthropic(context)
-            elif self.provider == 'openai':
-                return self._generate_openai(context)
-            else:
-                raise ValueError(f"Unsupported provider: {self.provider}")
-                
+            return self.rate_limit_handler.execute_with_retry(
+                self._generate_with_provider,
+                context
+            )
         except Exception as e:
-            logger.error(f"Error generating suggestion with {self.provider}: {e}")
+            logger.error(f"Error generating suggestion: {e}")
             raise
+            
+    def _generate_with_provider(self, context: dict) -> str:
+        """Internal method to generate based on provider"""
+        if self.provider == 'gemini':
+            return self._generate_gemini(context)
+        elif self.provider == 'anthropic':
+            return self._generate_anthropic(context)
+        elif self.provider == 'openai':
+            return self._generate_openai(context)
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
     
     def _generate_gemini(self, context: dict) -> str:
         """Generate suggestion using Gemini"""
         try:
             # Construct the endpoint URL with API key
-            endpoint = f"{self.endpoints['gemini']}?key={self.api_key}"
+            endpoint = f"{self.endpoints['gemini']}?key={self.gemini_key}"
             
             payload = {
                 "contents": [{
@@ -1512,28 +1783,37 @@ class LLMService:
             raise
     
     def _generate_anthropic(self, context: dict) -> str:
-        """Generate suggestion using Anthropic/Claude"""
-        headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': self.anthropic_key,
-            'anthropic-version': '2023-06-01'
-        }
-        
-        payload = {
-            "messages": [{
-                "role": "user",
-                "content": self._construct_prompt(context)
-            }],
-            "model": "claude-3-opus-20240229",
-            "max_tokens": 1024
-        }
-        
-        response = requests.post(self.endpoints['anthropic'], json=payload, headers=headers)
-        
-        if response.status_code != 200:
-            raise Exception(f"Anthropic API error: {response.text}")
-        
-        return self._parse_anthropic_response(response.json())
+        """Generate suggestion using Anthropic's Claude"""
+        try:
+            headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': self.anthropic_key,
+                'anthropic-version': '2023-06-01'
+            }
+            
+            prompt = self._construct_prompt(context)
+            
+            payload = {
+                "model": "claude-3-sonnet-20240229",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 4096
+            }
+            
+            response = requests.post(
+                self.endpoints['anthropic'],
+                headers=headers,
+                json=payload
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"Anthropic API error: {response.text}")
+                
+            response_data = response.json()
+            return response_data['content'][0]['text']
+            
+        except Exception as e:
+            logger.error(f"Error in Anthropic API call: {e}")
+            raise
     
     def _generate_openai(self, context: dict) -> str:
         """Generate suggestion using OpenAI"""
@@ -1543,7 +1823,7 @@ class LLMService:
         }
         
         payload = {
-            "model": "gpt-4-turbo-preview",
+            "model": "gpt-4o",  # Changed from gpt-4-turbo-preview to gpt-4
             "messages": [{
                 "role": "user",
                 "content": self._construct_prompt(context)
@@ -1601,12 +1881,14 @@ class LLMService:
             
             # Sort tasks by due date and priority
             def sort_key(task):
-                # Default values if fields are missing
                 due_date = task.get('due') or '9999-12-31'
                 priority = task.get('priority', 999)
                 return (due_date, priority)
                 
             active_tasks.sort(key=sort_key)
+            
+            # Limit number of tasks to prevent token overflow
+            active_tasks = active_tasks[:10]  # Only include 10 most relevant tasks
 
             # Format the prompt
             prompt = f"""{system_prompt}
@@ -1619,7 +1901,6 @@ User Query:
 
 Please provide a response following the system prompt format exactly.
 """
-            logger.debug(f"Constructed prompt: {prompt}")
             return prompt
 
         except Exception as e:
@@ -1632,95 +1913,151 @@ class ContextCompressor:
     def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
         self.cache_dir = os.path.join('tasks', 'reduced_context')
+        self.compression_index_path = os.path.join(self.cache_dir, 'compression_index.json')
         os.makedirs(self.cache_dir, exist_ok=True)
-        # Define files/types to exclude from compression
-        self.excluded_files = {
-            'system_prompt.txt',
-            'completed_tasks.json',
-            'inbox_tasks.json'
-        }
-        self.excluded_extensions = {'.json'}
-        self.excluded_prefixes = {'project_'}  # Add excluded prefixes
+        self.cache_manager = CacheManager(self.cache_dir)
         
-    def get_reduced_version(self, file_path: str) -> str:
-        """Get or create reduced version of a document"""
+    def compress_context(self, context: dict, max_tokens: int = 4000) -> dict:
+        """Compress context to fit within token limit"""
         try:
-            # Check if file should be excluded
-            base_name = os.path.basename(file_path)
-            file_ext = os.path.splitext(base_name)[1]
-            
-            # Check all exclusion criteria
-            if (base_name in self.excluded_files or 
-                file_ext in self.excluded_extensions or
-                any(base_name.startswith(prefix) for prefix in self.excluded_prefixes)):
-                logger.info(f"Skipping compression for excluded file: {base_name}")
-                return file_path
-            
-            # Generate cache path
-            cache_path = os.path.join(self.cache_dir, f"reduced_{base_name}")
-            
-            # Check if reduced version exists and is newer than original
-            if os.path.exists(cache_path):
-                if os.path.getmtime(cache_path) > os.path.getmtime(file_path):
-                    return cache_path
-            
-            # If not cached or outdated, compress the document
-            return self.compress_document(file_path)
+            cache_key = f"context_{hash(str(context))}"
+            cached = self.cache_manager.get(cache_key)
+            if cached:
+                return cached
+                
+            compressed = self._do_compression(context, max_tokens)
+            self.cache_manager.set(cache_key, compressed)
+            return compressed
             
         except Exception as e:
-            logger.error(f"Error getting reduced version: {e}")
-            return file_path  # Return original if compression fails
+            error = ErrorHandler.handle_data_error(e, "context_compression")
+            logger.error(f"Compression error: {error}")
+            return context  # Return original on error
+            
+    def _do_compression(self, context: dict, max_tokens: int) -> dict:
+        """Perform actual context compression"""
+        try:
+            compressed_context = context.copy()
+            
+            # Compress large text fields in repo contents
+            if 'repo_info' in compressed_context and 'raw_contents' in compressed_context['repo_info']:
+                compressed_contents = {}
+                for path, content in compressed_context['repo_info']['raw_contents'].items():
+                    if len(content) > max_tokens * 4:  # Rough character estimate
+                        prompt = f"""Please compress this content while preserving key information:
+                        1. Maintain all technical details and specific data
+                        2. Keep task descriptions and requirements
+                        3. Preserve dates, numbers, and proper nouns
+                        4. Remove redundant explanations
+                        5. Target ~50% length reduction
+
+                        Content:
+                        {content[:max_tokens * 4]}  # Limit initial input
+                        """
+                        
+                        try:
+                            compressed = self.llm_service.generate_suggestion({"user_query": prompt})
+                            compressed_contents[path] = compressed
+                        except Exception as e:
+                            logger.error(f"Error compressing {path}: {e}")
+                            compressed_contents[path] = content[:max_tokens * 4]  # Truncate as fallback
+                    else:
+                        compressed_contents[path] = content
+                        
+                compressed_context['repo_info']['raw_contents'] = compressed_contents
+                
+            # Compress task history if needed
+            if 'repo_info' in compressed_context and 'tasks' in compressed_context['repo_info']:
+                tasks = compressed_context['repo_info']['tasks']
+                if len(tasks) > 50:  # Arbitrary limit
+                    # Keep most recent and highest priority tasks
+                    sorted_tasks = sorted(
+                        tasks,
+                        key=lambda x: (
+                            x.get('completed_at', float('inf')),  # Uncompleted first
+                            x.get('priority', 999),  # Higher priority first
+                            x.get('created_at', 0)  # More recent first
+                        )
+                    )
+                    compressed_context['repo_info']['tasks'] = sorted_tasks[:50]
+            
+            return compressed_context
+            
+        except Exception as e:
+            logger.error(f"Error in context compression: {e}")
+            return context  # Return original if compression fails
+
+class ErrorHandler:
+    """Centralized error handling"""
     
-    def compress_document(self, file_path: str) -> str:
-        """Compress a document using LLM summarization"""
+    @staticmethod
+    def handle_api_error(e: Exception, context: str) -> dict:
+        """Handle API and network related errors"""
+        if isinstance(e, RateLimitExceededException):
+            logger.warning(f"Rate limit exceeded in {context}")
+            return {"error": "rate_limit", "retry_after": e.reset_time}
+        elif isinstance(e, requests.exceptions.RequestException):
+            logger.error(f"API request failed in {context}: {e}")
+            return {"error": "api_error", "message": str(e)}
+        else:
+            logger.error(f"Unexpected error in {context}: {e}")
+            return {"error": "unknown", "message": str(e)}
+
+    @staticmethod
+    def handle_data_error(e: Exception, context: str) -> dict:
+        """Handle data processing and storage errors"""
+        if isinstance(e, json.JSONDecodeError):
+            logger.error(f"Invalid JSON in {context}: {e}")
+            return {"error": "invalid_json", "message": str(e)}
+        elif isinstance(e, FileNotFoundError):
+            logger.error(f"File not found in {context}: {e}")
+            return {"error": "file_not_found", "message": str(e)}
+        else:
+            logger.error(f"Data error in {context}: {e}")
+            return {"error": "data_error", "message": str(e)}
+
+class CacheManager:
+    """Manages caching of analysis results"""
+    
+    def __init__(self, cache_dir: str, max_age: timedelta = timedelta(hours=1)):
+        self.cache_dir = cache_dir
+        self.max_age = max_age
+        self.cache = {}
+        self.last_update = {}
+        os.makedirs(cache_dir, exist_ok=True)
+        
+    def get(self, key: str) -> Optional[Any]:
+        """Get value from cache if not expired"""
         try:
-            # Check exclusions again for safety
-            base_name = os.path.basename(file_path)
-            file_ext = os.path.splitext(base_name)[1]
-            
-            if (base_name in self.excluded_files or 
-                file_ext in self.excluded_extensions or
-                any(base_name.startswith(prefix) for prefix in self.excluded_prefixes)):
-                return file_path
-            
-            # Read the original document
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # Skip if content is already small
-            if len(content) <= 4000:
-                return file_path
-            
-            # Create prompt for summarization using your improved prompt
-            prompt = f"""Please analyze and summarize the following document. Your summary should:
-1. Maintain all key information, technical details, and specific data points
-2. Preserve any numerical values, dates, and proper nouns
-3. Keep critical action items or tasks
-4. Reduce the overall length by 50-70%
-5. Use clear, concise language while maintaining technical accuracy
-
-Document to summarize:
-{content[:8000]}  # Only process first 8000 chars if very large
-
-If the content was truncated, please add: '[Content truncated for length]'
-"""
-            
-            # Get summary from LLM
-            summary = self.llm_service.generate_suggestion({"user_query": prompt})
-            
-            # Save to cache
-            cache_path = os.path.join(
-                self.cache_dir, 
-                f"reduced_{os.path.basename(file_path)}"
-            )
-            with open(cache_path, 'w', encoding='utf-8') as f:
-                f.write(summary)
-            
-            return cache_path
-            
+            if key in self.cache:
+                last_update = self.last_update.get(key)
+                if last_update and datetime.now() - last_update < self.max_age:
+                    return self.cache[key]
+            return None
         except Exception as e:
-            logger.error(f"Error compressing document: {e}")
-            return file_path  # Return original if compression fails
+            logger.error(f"Error retrieving from cache: {e}")
+            return None
+            
+    def set(self, key: str, value: Any):
+        """Set value in cache"""
+        try:
+            self.cache[key] = value
+            self.last_update[key] = datetime.now()
+            self._persist_cache()
+        except Exception as e:
+            logger.error(f"Error setting cache: {e}")
+            
+    def _persist_cache(self):
+        """Persist cache to disk"""
+        try:
+            cache_file = os.path.join(self.cache_dir, 'analysis_cache.json')
+            with open(cache_file, 'w') as f:
+                json.dump({
+                    'cache': self.cache,
+                    'last_update': {k: v.isoformat() for k, v in self.last_update.items()}
+                }, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error persisting cache: {e}")
 
 def ensure_directories():
     """Create necessary directories and initialize files if needed"""
@@ -1734,11 +2071,6 @@ def ensure_directories():
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
         logger.info(f"Ensured directory exists: {directory}")
-
-    # Initialize feedback file if it doesn't exist
-    if not os.path.exists(ACTION_OUTCOMES_FILE):
-        with jsonlines.open(ACTION_OUTCOMES_FILE, mode='w') as writer:
-            writer.write({})  # Write empty object as initial state
 
 def ensure_system_prompt():
     """Ensure system_prompt.txt exists with default content"""
@@ -1794,7 +2126,7 @@ def handle_project(project_name):
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    """Handle file uploads to tasks directory with compression for large text files"""
+    """Handle file uploads with proper compression tracking"""
     try:
         if 'file' not in request.files:
             return jsonify({
@@ -1814,36 +2146,20 @@ def upload_file():
         tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
         file_path = os.path.join(tasks_dir, filename)
         
-        # Save the original file to tasks directory
+        # Save the original file
         file.save(file_path)
         
-        # Also save an uncompressed copy
-        uncompressed_dir = os.path.join(tasks_dir, 'uncompressed_context')
-        uncompressed_path = os.path.join(uncompressed_dir, filename)
-        with open(file_path, 'rb') as src, open(uncompressed_path, 'wb') as dst:
-            dst.write(src.read())
-        logger.info(f"Saved uncompressed copy to: {uncompressed_path}")
+        # Initialize system components for compression
+        system = initialize_system()
         
-        # If it's a text file and large enough, compress it for API use
-        if filename.endswith('.txt'):
-            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-                content = f.read()
-                
-            if len(content) > 4000:  # Only compress large files
-                # Initialize compressor
-                llm_service = LLMService()
-                context_compressor = ContextCompressor(llm_service)
-                
-                # Compress the file
-                reduced_path = context_compressor.compress_document(file_path)
-                
-                logger.info(f"Compressed {filename} at upload time. Reduced version stored at {reduced_path}")
+        # Attempt compression if needed
+        compressed_path = system.context_aggregator.context_compressor.get_or_create_compressed_version(file_path)
         
         return jsonify({
             'success': True,
             'filename': filename,
-            'compressed': filename.endswith('.txt') and len(content) > 4000,
-            'uncompressed_path': uncompressed_path
+            'compressed': compressed_path != file_path,
+            'compressed_path': compressed_path if compressed_path != file_path else None
         })
         
     except Exception as e:
@@ -1926,10 +2242,11 @@ def initialize_system():
             repo_name=os.getenv('GITHUB_REPO')
         )
         
-        # Initialize other components...
+        # Initialize components
         github_monitor = GitHubActivityMonitor(resource_manager)
         user_tracker = UserInteractionTracker()
         temporal_analyzer = TemporalAnalysis()
+        task_analyzer = TaskAnalyzer()  # Add TaskAnalyzer
         feedback_collector = FeedbackCollector(github_monitor, user_tracker, temporal_analyzer)
         context_aggregator = ContextAggregator(github_monitor)
         
@@ -1938,6 +2255,7 @@ def initialize_system():
             github_monitor=github_monitor,
             user_tracker=user_tracker,
             temporal_analyzer=temporal_analyzer,
+            task_analyzer=task_analyzer,  # Include in returned namespace
             feedback_collector=feedback_collector,
             context_aggregator=context_aggregator,
             llm_service=llm_service
@@ -2145,6 +2463,386 @@ def change_provider():
             'success': False,
             'error': str(e)
         }), 500
+
+class TaskAnalyzer:
+    """Analyzes task completion patterns and metrics"""
+    
+    def __init__(self):
+        self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        self.cache = {}
+        self.cache_timeout = timedelta(hours=1)
+        self.last_update = None
+        os.makedirs(self.data_dir, exist_ok=True)
+
+    def calculate_velocity_impact(self, tasks: List[dict]) -> dict:
+        """Calculate velocity trends and impact factors"""
+        velocity_data = {
+            "velocity_trend": {},
+            "impact_factors": [],
+            "recommendations": []
+        }
+        try:
+            # Calculate current velocity
+            current_velocity = self._calculate_velocity(tasks)
+            
+            # Analyze trend
+            velocity_data["velocity_trend"] = {
+                "current": current_velocity["tasks_per_day"],
+                "trend": self._analyze_velocity_trend(tasks),
+                "blockers": self._identify_velocity_blockers(tasks)
+            }
+            
+            # Identify impact factors
+            velocity_data["impact_factors"] = self._identify_impact_factors(tasks)
+            
+            # Generate recommendations
+            velocity_data["recommendations"] = self._generate_velocity_recommendations(
+                current_velocity, 
+                velocity_data["impact_factors"]
+            )
+            
+            return velocity_data
+            
+        except Exception as e:
+            logger.error(f"Error calculating velocity impact: {e}")
+            return velocity_data
+
+    def _analyze_velocity_trend(self, tasks: List[dict]) -> str:
+        """Analyze the trend in velocity over time"""
+        try:
+            completed_tasks = [t for t in tasks if t.get('completed_at')]
+            if not completed_tasks:
+                return "insufficient_data"
+
+            # Group by week
+            weekly_counts = {}
+            for task in completed_tasks:
+                completion_date = datetime.fromtimestamp(task['completed_at'])
+                week_num = completion_date.isocalendar()[1]
+                weekly_counts[week_num] = weekly_counts.get(week_num, 0) + 1
+
+            # Calculate trend
+            weeks = sorted(weekly_counts.keys())
+            if len(weeks) < 2:
+                return "stable"
+
+            recent_velocity = weekly_counts[weeks[-1]]
+            previous_velocity = sum(weekly_counts[w] for w in weeks[:-1]) / (len(weeks) - 1)
+
+            if recent_velocity > previous_velocity * 1.2:
+                return "increasing"
+            elif recent_velocity < previous_velocity * 0.8:
+                return "decreasing"
+            return "stable"
+
+        except Exception as e:
+            logger.error(f"Error analyzing velocity trend: {e}")
+            return "unknown"
+
+    def _identify_velocity_blockers(self, tasks: List[dict]) -> List[dict]:
+        """Identify factors blocking velocity"""
+        try:
+            blockers = []
+            completed_tasks = [t for t in tasks if t.get('completed_at')]
+            
+            # Analyze completion times
+            completion_times = []
+            for task in completed_tasks:
+                if task.get('created_at'):
+                    time_taken = task['completed_at'] - task['created_at']
+                    completion_times.append({
+                        'time': time_taken,
+                        'labels': task.get('labels', []),
+                        'blockers': task.get('blockers', [])
+                    })
+
+            # Identify patterns in slow completions
+            if completion_times:
+                avg_time = sum(ct['time'] for ct in completion_times) / len(completion_times)
+                slow_tasks = [ct for ct in completion_times if ct['time'] > avg_time * 1.5]
+                
+                # Analyze common factors in slow tasks
+                common_labels = {}
+                common_blockers = {}
+                
+                for task in slow_tasks:
+                    for label in task['labels']:
+                        common_labels[label] = common_labels.get(label, 0) + 1
+                    for blocker in task['blockers']:
+                        common_blockers[blocker] = common_blockers.get(blocker, 0) + 1
+
+                # Add significant blockers
+                for blocker, count in common_blockers.items():
+                    if count >= len(slow_tasks) * 0.3:  # Present in 30% or more of slow tasks
+                        blockers.append({
+                            "type": "blocker",
+                            "name": blocker,
+                            "impact": count / len(slow_tasks)
+                        })
+
+                # Add problematic task types
+                for label, count in common_labels.items():
+                    if count >= len(slow_tasks) * 0.3:
+                        blockers.append({
+                            "type": "task_type",
+                            "name": label,
+                            "impact": count / len(slow_tasks)
+                        })
+
+            return sorted(blockers, key=lambda x: x["impact"], reverse=True)
+
+        except Exception as e:
+            logger.error(f"Error identifying velocity blockers: {e}")
+            return []
+
+    def _identify_impact_factors(self, tasks: List[dict]) -> List[dict]:
+        """Identify factors impacting task completion velocity"""
+        try:
+            factors = []
+            completed_tasks = [t for t in tasks if t.get('completed_at')]
+            
+            if not completed_tasks:
+                return factors
+
+            # Analyze time of day impact
+            hour_success_rates = self._analyze_hourly_success_rates(completed_tasks)
+            if hour_success_rates:
+                factors.append({
+                    "type": "time_of_day",
+                    "data": hour_success_rates,
+                    "impact_score": self._calculate_impact_score(hour_success_rates)
+                })
+
+            # Analyze day of week impact
+            day_success_rates = self._analyze_daily_success_rates(completed_tasks)
+            if day_success_rates:
+                factors.append({
+                    "type": "day_of_week",
+                    "data": day_success_rates,
+                    "impact_score": self._calculate_impact_score(day_success_rates)
+                })
+
+            # Sort by impact score
+            return sorted(factors, key=lambda x: x["impact_score"], reverse=True)
+
+        except Exception as e:
+            logger.error(f"Error identifying impact factors: {e}")
+            return []
+
+    def _generate_velocity_recommendations(self, current_velocity: dict, impact_factors: List[dict]) -> List[str]:
+        """Generate recommendations for improving velocity"""
+        try:
+            recommendations = []
+            
+            # Base recommendations on current velocity
+            if current_velocity["tasks_per_day"] < 1:
+                recommendations.append("Consider breaking down tasks into smaller, more manageable pieces")
+            
+            # Add recommendations based on impact factors
+            for factor in impact_factors:
+                if factor["type"] == "time_of_day":
+                    optimal_hours = [h for h, r in factor["data"].items() if r > 0.7]
+                    if optimal_hours:
+                        recommendations.append(
+                            f"Schedule important tasks during your most productive hours: {', '.join(map(str, optimal_hours))}"
+                        )
+                
+                elif factor["type"] == "day_of_week":
+                    optimal_days = [d for d, r in factor["data"].items() if r > 0.7]
+                    if optimal_days:
+                        recommendations.append(
+                            f"Plan complex tasks for your most productive days: {', '.join(optimal_days)}"
+                        )
+
+            return recommendations
+
+        except Exception as e:
+            logger.error(f"Error generating velocity recommendations: {e}")
+            return []
+
+    def analyze_completion_patterns(self, tasks: List[dict]) -> dict:
+        try:
+            patterns = {
+                "completion_rate": self._calculate_completion_rate(tasks),
+                "velocity": self._calculate_velocity(tasks),
+                "trends": self._analyze_trends(tasks),
+                "blockers": self._identify_blockers(tasks)
+            }
+            
+            # Log analysis results
+            logger.info(f"Analyzed completion patterns: {json.dumps(patterns, indent=2)}")
+            
+            return patterns
+        except Exception as e:
+            logger.error(f"Error analyzing completion patterns: {e}")
+            return {}
+            
+    def _calculate_completion_rate(self, tasks: List[dict]) -> float:
+        """Calculate the task completion rate"""
+        try:
+            if not tasks:
+                return 0.0
+            completed = len([t for t in tasks if t.get('completed_at')])
+            return completed / len(tasks)
+        except Exception as e:
+            logger.error(f"Error calculating completion rate: {e}")
+            return 0.0
+            
+    def _calculate_velocity(self, tasks: List[dict]) -> dict:
+        """Calculate task completion velocity metrics"""
+        try:
+            velocity = {
+                "tasks_per_day": 0.0,
+                "avg_completion_time": 0.0,
+                "trend": "stable"
+            }
+            
+            completed_tasks = [t for t in tasks if t.get('completed_at')]
+            if not completed_tasks:
+                return velocity
+                
+            # Calculate tasks per day
+            date_counts = {}
+            completion_times = []
+            
+            for task in completed_tasks:
+                completion_date = datetime.fromtimestamp(task['completed_at']).date()
+                date_counts[completion_date] = date_counts.get(completion_date, 0) + 1
+                
+                if task.get('created_at'):
+                    completion_time = task['completed_at'] - task['created_at']
+                    completion_times.append(completion_time)
+            
+            if date_counts:
+                velocity["tasks_per_day"] = sum(date_counts.values()) / len(date_counts)
+                
+            if completion_times:
+                velocity["avg_completion_time"] = sum(completion_times) / len(completion_times) / 3600  # Convert to hours
+                
+            return velocity
+            
+        except Exception as e:
+            logger.error(f"Error calculating velocity: {e}")
+            return {"tasks_per_day": 0.0, "avg_completion_time": 0.0, "trend": "unknown"}
+            
+    def _analyze_trends(self, tasks: List[dict]) -> List[dict]:
+        """Analyze trends in task completion"""
+        try:
+            trends = []
+            completed_tasks = [t for t in tasks if t.get('completed_at')]
+            
+            if not completed_tasks:
+                return trends
+                
+            # Group by week
+            weekly_stats = {}
+            for task in completed_tasks:
+                completion_date = datetime.fromtimestamp(task['completed_at'])
+                week_num = completion_date.isocalendar()[1]
+                
+                weekly_stats.setdefault(week_num, {
+                    "completed": 0,
+                    "avg_time": 0.0,
+                    "total_time": 0.0
+                })
+                
+                weekly_stats[week_num]["completed"] += 1
+                if task.get('created_at'):
+                    completion_time = (task['completed_at'] - task['created_at']) / 3600
+                    weekly_stats[week_num]["total_time"] += completion_time
+            
+            # Calculate averages and build trend data
+            for week, stats in weekly_stats.items():
+                if stats["completed"] > 0:
+                    stats["avg_time"] = stats["total_time"] / stats["completed"]
+                    trends.append({
+                        "week": week,
+                        "completed_count": stats["completed"],
+                        "avg_completion_time": stats["avg_time"]
+                    })
+            
+            return sorted(trends, key=lambda x: x["week"])
+            
+        except Exception as e:
+            logger.error(f"Error analyzing trends: {e}")
+            return []
+            
+    def _identify_blockers(self, tasks: List[dict]) -> List[dict]:
+        """Identify common blockers and their impact"""
+        try:
+            blocker_stats = {}
+            
+            for task in tasks:
+                blockers = task.get('blockers', [])
+                for blocker in blockers:
+                    blocker_stats.setdefault(blocker, {
+                        "count": 0,
+                        "avg_delay": 0.0,
+                        "total_delay": 0.0
+                    })
+                    
+                    blocker_stats[blocker]["count"] += 1
+                    if task.get('completed_at') and task.get('created_at'):
+                        delay = (task['completed_at'] - task['created_at']) / 3600
+                        blocker_stats[blocker]["total_delay"] += delay
+            
+            # Calculate averages and sort by impact
+            blockers = []
+            for blocker, stats in blocker_stats.items():
+                if stats["count"] > 0:
+                    stats["avg_delay"] = stats["total_delay"] / stats["count"]
+                    blockers.append({
+                        "blocker": blocker,
+                        "occurrence_count": stats["count"],
+                        "avg_delay_hours": stats["avg_delay"]
+                    })
+            
+            return sorted(blockers, key=lambda x: x["occurrence_count"], reverse=True)
+            
+        except Exception as e:
+            logger.error(f"Error identifying blockers: {e}")
+            return []
+
+class RateLimitHandler:
+    """Handles API rate limiting and retries"""
+    
+    def __init__(self, max_retries: int = 3, initial_delay: float = 1.0):
+        self.max_retries = max_retries
+        self.initial_delay = initial_delay
+        self.retry_counts = {}
+        
+    def execute_with_retry(self, func: Callable, *args, **kwargs) -> Any:
+        """Execute a function with retry logic for rate limits"""
+        attempt = 0
+        delay = self.initial_delay
+        
+        while attempt < self.max_retries:
+            try:
+                return func(*args, **kwargs)
+                
+            except RateLimitExceededException as e:
+                attempt += 1
+                if attempt == self.max_retries:
+                    raise
+                
+                # Calculate delay with exponential backoff
+                wait_time = delay * (2 ** (attempt - 1))
+                logger.warning(f"Rate limit hit, waiting {wait_time}s before retry {attempt}")
+                time.sleep(wait_time)
+                
+            except Exception as e:
+                # Don't retry on non-rate-limit errors
+                raise
+                
+    def track_request(self, endpoint: str):
+        """Track request count for an endpoint"""
+        now = time.time()
+        self.retry_counts[endpoint] = self.retry_counts.get(endpoint, 0) + 1
+        
+    def should_retry(self, endpoint: str) -> bool:
+        """Check if we should retry a request based on recent history"""
+        count = self.retry_counts.get(endpoint, 0)
+        return count < self.max_retries
 
 if __name__ == '__main__':
     main()

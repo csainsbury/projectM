@@ -1,18 +1,6 @@
 {
   "tasks": [
     {
-      "id": "8706395925",
-      "content": "draft LPAC form for PRESIDE [120m]",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-10",
-      "labels": [
-        "PRESIDE",
-        "reclaim"
-      ],
-      "created_at": 1734973111
-    },
-    {
       "id": "8706647295",
       "content": "implement CTGAN method for conditional data generation",
       "description": "",
@@ -36,30 +24,6 @@
       "created_at": 1735042883
     },
     {
-      "id": "8716549219",
-      "content": "review CXR paper from greta [60m]",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-10",
-      "labels": [
-        "VisC",
-        "reclaim"
-      ],
-      "created_at": 1735397704
-    },
-    {
-      "id": "8742418534",
-      "content": "generate end to end examples of data from input -> base models -> metamodels -> calibration [360m]",
-      "description": "",
-      "priority": 1,
-      "due": "2025-01-16",
-      "labels": [
-        "MWDH_Metamodels",
-        "reclaim"
-      ],
-      "created_at": 1736186560
-    },
-    {
       "id": "8744873088",
       "content": "Fwd: ATTD 2025 - Invitation to Upload your e-Poster",
       "description": "",
@@ -71,26 +35,63 @@
       "created_at": 1736245582
     },
     {
-      "id": "8746324660",
-      "content": "Fwd: ACTION REQUESTED: IUK Precision Meeting Internal Steering Meeting Thursday 16th Jan 2025",
+      "id": "8752825807",
+      "content": "NW London form for CV risk prediction [120m]",
       "description": "",
       "priority": 1,
-      "due": null,
+      "due": "2025-02-05",
       "labels": [
         "reclaim"
       ],
-      "created_at": 1736268278
+      "created_at": 1736415582
     },
     {
-      "id": "8751279247",
-      "content": "order glasses [30m]",
+      "id": "8763833222",
+      "content": "draft arxiv version of struan paper. aim for submit [240m] link: https://www.overleaf.com/project/676719a24c02758172b00ca1",
       "description": "",
-      "priority": 4,
-      "due": "2025-01-09",
+      "priority": 1,
+      "due": "2025-01-31",
       "labels": [
+        "CAUSALFound",
         "reclaim"
       ],
-      "created_at": 1736370520
+      "created_at": 1736718515
+    },
+    {
+      "id": "8767691066",
+      "content": "register for DUK [30m]",
+      "description": "",
+      "priority": 1,
+      "due": "2025-01-17",
+      "labels": [
+        "GGH_diabetes",
+        "reclaim"
+      ],
+      "created_at": 1736794607
+    },
+    {
+      "id": "8770115084",
+      "content": "review diabetes prevention program key metrics post implementation in the literature [120m]",
+      "description": "",
+      "priority": 1,
+      "due": "2025-01-23",
+      "labels": [
+        "MWDHR&D",
+        "reclaim"
+      ],
+      "created_at": 1736853422
+    },
+    {
+      "id": "8778995983",
+      "content": "request trainee access on turas",
+      "description": "",
+      "priority": 1,
+      "due": "2025-01-23",
+      "labels": [
+        "NHS_Admin",
+        "reclaim"
+      ],
+      "created_at": 1737044662
     }
   ]
 }

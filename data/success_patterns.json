@@ -1,8 +1,13 @@
 {
-  "completion_rate": 0.0,
-  "avg_completion_time": 0.0,
+  "completion_rate": 0.574468085106383,
+  "completed_count": 27,
+  "last_updated": 1737047057,
   "common_blockers": [],
-  "successful_labels": [],
-  "completed_count": 17,
-  "last_updated": 1736317673
+  "successful_labels": [
+    "reclaim",
+    "NHS_Admin",
+    "CAUSALFound",
+    "PRESIDE",
+    "Dundee_Colab"
+  ]
 }
