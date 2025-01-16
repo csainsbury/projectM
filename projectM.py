@@ -212,6 +212,107 @@ class GitHubResourceManager:
             logger.error(f"Error accessing repository contents: {e}")
             raise
 
+class LocalResourceManager:
+    """Manages local task and feedback storage"""
+    
+    def __init__(self):
+        self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        self.tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
+        
+        # Ensure directories exist
+        os.makedirs(self.data_dir, exist_ok=True)
+        os.makedirs(self.tasks_dir, exist_ok=True)
+        
+        # Define file paths
+        self.tasks_file = os.path.join(self.tasks_dir, 'tasks.json')
+        self.completed_tasks_file = os.path.join(self.tasks_dir, 'completed_tasks.json')
+        self.feedback_file = os.path.join(self.data_dir, 'feedback.jsonl')
+        
+    def get_tasks(self) -> List[dict]:
+        """Get all tasks from local storage"""
+        try:
+            tasks = []
+            
+            # Load active tasks
+            if os.path.exists(self.tasks_file):
+                with open(self.tasks_file, 'r') as f:
+                    tasks.extend(json.load(f))
+                    
+            # Load completed tasks
+            if os.path.exists(self.completed_tasks_file):
+                with open(self.completed_tasks_file, 'r') as f:
+                    tasks.extend(json.load(f))
+                    
+            return tasks
+            
+        except Exception as e:
+            logger.error(f"Error loading tasks: {e}")
+            return []
+            
+    def save_task(self, task: dict):
+        """Save a task to local storage"""
+        try:
+            tasks = self.get_tasks()
+            
+            # Update existing task or add new one
+            task_index = next((i for i, t in enumerate(tasks) if t['id'] == task['id']), None)
+            if task_index is not None:
+                tasks[task_index] = task
+            else:
+                tasks.append(task)
+                
+            # Split into active and completed tasks
+            active_tasks = [t for t in tasks if not t.get('completed_at')]
+            completed_tasks = [t for t in tasks if t.get('completed_at')]
+            
+            # Save to respective files
+            with open(self.tasks_file, 'w') as f:
+                json.dump(active_tasks, f, indent=2)
+                
+            with open(self.completed_tasks_file, 'w') as f:
+                json.dump(completed_tasks, f, indent=2)
+                
+        except Exception as e:
+            logger.error(f"Error saving task: {e}")
+            
+    def save_feedback(self, feedback: dict):
+        """Save feedback to local storage"""
+        try:
+            with jsonlines.open(self.feedback_file, mode='a') as writer:
+                writer.write(feedback)
+        except Exception as e:
+            logger.error(f"Error saving feedback: {e}")
+
+class ActivityMonitor:
+    """Monitors task activity and updates"""
+    
+    def __init__(self, resource_manager: LocalResourceManager):
+        self.resource_manager = resource_manager
+        
+    def get_tasks(self) -> dict:
+        """Get all tasks with metadata"""
+        try:
+            tasks = self.resource_manager.get_tasks()
+            return {
+                'tasks': tasks,
+                'total_count': len(tasks),
+                'completed_count': len([t for t in tasks if t.get('completed_at')])
+            }
+        except Exception as e:
+            logger.error(f"Error getting tasks: {e}")
+            return {'tasks': [], 'total_count': 0, 'completed_count': 0}
+            
+    def track_task_update(self, task_id: str, update_type: str):
+        """Track task updates"""
+        try:
+            task = next((t for t in self.resource_manager.get_tasks() if t['id'] == task_id), None)
+            if task:
+                task['last_updated'] = int(time.time())
+                task['last_update_type'] = update_type
+                self.resource_manager.save_task(task)
+        except Exception as e:
+            logger.error(f"Error tracking task update: {e}")
+
 # ---------------------------------------------------------------------------
 # Updated GitHubActivityMonitor
 # ---------------------------------------------------------------------------
@@ -980,10 +1081,12 @@ class TemporalAnalysis(AnalysisBase):
 class FeedbackCollector:
     """Collects and analyzes feedback from multiple sources"""
 
-    def __init__(self, github_monitor: GitHubActivityMonitor, user_tracker: UserInteractionTracker, temporal_analyzer: TemporalAnalysis):
-        self.github_monitor = github_monitor
+    def __init__(self, activity_monitor: ActivityMonitor, user_tracker: UserInteractionTracker, temporal_analyzer: TemporalAnalysis):
+        self.activity_monitor = activity_monitor
         self.user_tracker = user_tracker
         self.temporal_analyzer = temporal_analyzer
+        
+        # Initialize paths
         self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
         self.tasks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks')
         
@@ -1029,7 +1132,7 @@ class FeedbackCollector:
             interactions = self.user_tracker.track_interactions(suggestion_id)
             
             # Get task history including completed tasks
-            task_history = self.github_monitor.get_tasks().get("tasks", [])
+            task_history = self.activity_monitor.get_tasks().get("tasks", [])
             
             # Calculate completion time if task was completed
             completion_time = self._calculate_completion_time(suggestion_id, task_history)
@@ -1382,7 +1485,7 @@ class FeedbackCollector:
         """Periodic update of feedback data"""
         try:
             # Get latest tasks
-            task_history = self.github_monitor.get_tasks().get("tasks", [])
+            task_history = self.activity_monitor.get_tasks().get("tasks", [])
             
             # Update completion data
             self._store_completion_data(task_history)
@@ -1430,6 +1533,48 @@ class FeedbackCollector:
         except Exception as e:
             logger.error(f"Error analyzing successful labels: {e}")
             return []
+
+    def _load_success_patterns(self) -> dict:
+        """Load success patterns from file"""
+        try:
+            if os.path.exists(self.success_patterns_file):
+                with open(self.success_patterns_file, 'r') as f:
+                    return json.load(f)
+            return {
+                'completion_rate': 0.0,
+                'completed_count': 0,
+                'last_updated': 0,
+                'common_blockers': [],
+                'successful_labels': []
+            }
+        except Exception as e:
+            logger.error(f"Error loading success patterns: {e}")
+            return {
+                'completion_rate': 0.0,
+                'completed_count': 0,
+                'last_updated': 0,
+                'common_blockers': [],
+                'successful_labels': []
+            }
+
+    def _load_temporal_analysis(self) -> dict:
+        """Load temporal analysis data from file"""
+        try:
+            if os.path.exists(self.temporal_analysis_file):
+                with open(self.temporal_analysis_file, 'r') as f:
+                    return json.load(f)
+            return {
+                'optimal_times': {},
+                'day_patterns': {},
+                'recent_trends': []
+            }
+        except Exception as e:
+            logger.error(f"Error loading temporal analysis: {e}")
+            return {
+                'optimal_times': {},
+                'day_patterns': {},
+                'recent_trends': []
+            }
 
 
 # ---------------------------------------------------------------------------
@@ -1560,9 +1705,8 @@ class FeedbackRepository:
 class ContextAggregator:
     """Aggregates context from multiple sources"""
     
-    def __init__(self, github_monitor: GitHubActivityMonitor):
-        self.github_monitor = github_monitor
-        # Use the singleton LLM service instead of creating a new one
+    def __init__(self, activity_monitor: ActivityMonitor):
+        self.activity_monitor = activity_monitor
         self.context_compressor = ContextCompressor(get_llm_service())
         
         # Initialize file paths
@@ -2177,7 +2321,7 @@ def get_analysis_report():
         system = initialize_system()
         
         # Get latest tasks
-        tasks = system.context_aggregator.github_monitor.get_tasks()
+        tasks = system.context_aggregator.activity_monitor.get_tasks()
         task_list = tasks.get('tasks', [])
         
         # Perform analysis
@@ -2236,26 +2380,23 @@ def initialize_system():
         # Use singleton LLM service
         llm_service = get_llm_service()
         
-        # Initialize resource manager first
-        resource_manager = GitHubResourceManager(
-            github_token=os.getenv('GITHUB_TOKEN'),
-            repo_name=os.getenv('GITHUB_REPO')
-        )
+        # Initialize local resource manager instead of GitHub
+        resource_manager = LocalResourceManager()
         
-        # Initialize components
-        github_monitor = GitHubActivityMonitor(resource_manager)
+        # Initialize components with local resource manager
+        activity_monitor = ActivityMonitor(resource_manager)
         user_tracker = UserInteractionTracker()
         temporal_analyzer = TemporalAnalysis()
-        task_analyzer = TaskAnalyzer()  # Add TaskAnalyzer
-        feedback_collector = FeedbackCollector(github_monitor, user_tracker, temporal_analyzer)
-        context_aggregator = ContextAggregator(github_monitor)
+        task_analyzer = TaskAnalyzer()
+        feedback_collector = FeedbackCollector(activity_monitor, user_tracker, temporal_analyzer)
+        context_aggregator = ContextAggregator(activity_monitor)
         
         return SimpleNamespace(
             resource_manager=resource_manager,
-            github_monitor=github_monitor,
+            activity_monitor=activity_monitor,  # Changed from github_monitor
             user_tracker=user_tracker,
             temporal_analyzer=temporal_analyzer,
-            task_analyzer=task_analyzer,  # Include in returned namespace
+            task_analyzer=task_analyzer,
             feedback_collector=feedback_collector,
             context_aggregator=context_aggregator,
             llm_service=llm_service
@@ -2265,39 +2406,35 @@ def initialize_system():
         raise
 
 def main():
-    """Main entry point for the application"""
+    """Initialize and run the application"""
     try:
-        # Ensure all required directories exist
-        ensure_directories()
-        
-        # Initialize system components
         system = initialize_system()
         
-        # Initialize scheduler for background tasks
+        # Set up background jobs
         scheduler = BackgroundScheduler()
         
-        # Add scheduled jobs
+        # Add hourly task sync
         scheduler.add_job(
-            func=lambda: system.feedback_collector.update_feedback(),
+            func=lambda: system.activity_monitor.get_tasks(),  # Changed from github_monitor
             trigger='interval',
             hours=1,
-            id='hourly_feedback_update'
+            id='hourly_task_sync'
         )
         
+        # Add daily pattern analysis
         scheduler.add_job(
             func=lambda: system.temporal_analyzer.analyze_patterns(
-                system.github_monitor.get_tasks()
+                system.activity_monitor.get_tasks()  # Changed from github_monitor
             ),
             trigger='interval',
             days=1,
             id='daily_pattern_analysis'
         )
         
-        # Start the scheduler
         scheduler.start()
         
-        # Start Flask app with port 5001 instead of 5000
-        app.run(host='0.0.0.0', port=5001, debug=True)
+        # Run the Flask app
+        app.run(debug=True)
         
     except Exception as e:
         logger.error(f"Error in main: {e}")
@@ -2339,65 +2476,34 @@ def get_projects():
             'error': str(e)
         }), 500
 
-# Add back the query endpoint
 @app.route('/api/query', methods=['POST'])
-def handle_query():
-    """Handle incoming queries using the global system instance"""
+def process_query():
+    """Process a user query and return suggestions"""
     try:
         data = request.get_json()
-        if not data or 'query' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Missing query in request'
-            }), 400
-
-        # Get repository contents including tasks and feedback
+        query = data.get('query', '')
+        
         system = initialize_system()
-        repo_contents = system.github_monitor.get_tasks()
         
-        # Debug logging for tasks
-        logger.info("=== Tasks Debug Information ===")
-        logger.info(f"Total tasks found: {len(repo_contents.get('tasks', []))}")
+        # Get current tasks and context
+        tasks = system.activity_monitor.get_tasks()  # Changed from github_monitor
+        task_list = tasks.get('tasks', [])
         
-        # Log inbox tasks
-        try:
-            with open('tasks/inbox_tasks.json', 'r') as f:
-                inbox_tasks = json.load(f)
-                logger.info(f"Inbox tasks: {json.dumps(inbox_tasks, indent=2)}")
-        except Exception as e:
-            logger.error(f"Error reading inbox_tasks.json: {e}")
-            
-        # Log completed tasks
-        try:
-            with open('tasks/completed_tasks.json', 'r') as f:
-                completed_tasks = json.load(f)
-                logger.info(f"Completed tasks: {json.dumps(completed_tasks, indent=2)}")
-        except Exception as e:
-            logger.error(f"Error reading completed_tasks.json: {e}")
+        # Process query through suggestion system
+        suggestion_system = ActionSuggestionSystem(
+            llm_service=system.llm_service,
+            feedback_collector=system.feedback_collector,
+            context_aggregator=system.context_aggregator
+        )
         
-        # Aggregate context with feedback
-        context = system.context_aggregator.aggregate_context(data['query'], repo_contents)
+        suggestions = suggestion_system.process_query(query, task_list)
+        return jsonify(suggestions)
         
-        # Debug logging for context
-        logger.info("=== Context Debug Information ===")
-        logger.info(f"Context being sent to LLM: {json.dumps(context, indent=2)}")
-        
-        # Generate suggestion using LLM
-        suggestion = system.llm_service.generate_suggestion(context)
-        logger.info(f"Generated suggestion: {suggestion}")
-        
-        # Collect feedback
-        system.feedback_collector.collect_feedback(suggestion)
-
-        return jsonify({
-            'success': True,
-            'suggestion': suggestion
-        })
     except Exception as e:
         logger.error(f"Error processing query: {e}")
         return jsonify({
-            'success': False,
-            'error': str(e)
+            "error": str(e),
+            "suggestions": []
         }), 500
 
 @app.route('/settings')
@@ -2843,6 +2949,120 @@ class RateLimitHandler:
         """Check if we should retry a request based on recent history"""
         count = self.retry_counts.get(endpoint, 0)
         return count < self.max_retries
+
+class ActionSuggestionSystem:
+    """System for generating and managing task suggestions"""
+    
+    def __init__(self, llm_service: LLMService, feedback_collector: FeedbackCollector, context_aggregator: ContextAggregator):
+        self.llm_service = llm_service
+        self.feedback_collector = feedback_collector
+        self.context_aggregator = context_aggregator
+        
+    def process_query(self, query: str, tasks: List[dict]) -> dict:
+        """Process a user query and generate suggestions"""
+        try:
+            # Build context for LLM
+            context = {
+                "user_query": query,
+                "repo_info": {
+                    "tasks": tasks,
+                    "feedback": self.feedback_collector._load_feedback_data()
+                }
+            }
+            
+            # Compress context if needed
+            compressed_context = self.context_aggregator.context_compressor.compress_context(context)
+            
+            # Generate suggestion using LLM
+            suggestion = self.llm_service.generate_suggestion(compressed_context)
+            
+            # Generate suggestion ID for tracking
+            suggestion_id = hashlib.md5(f"{query}_{time.time()}".encode()).hexdigest()
+            
+            # Collect initial feedback
+            feedback = self.feedback_collector.collect_feedback(suggestion_id)
+            
+            return {
+                "success": True,
+                "suggestion_id": suggestion_id,
+                "suggestion": suggestion,
+                "feedback": feedback,
+                "context": {
+                    "total_tasks": len(tasks),
+                    "active_tasks": len([t for t in tasks if not t.get('completed_at')])
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error processing query: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "suggestions": []
+            }
+    
+    def _analyze_query_context(self, query: str, tasks: List[dict]) -> dict:
+        """Analyze query context for better suggestions"""
+        try:
+            context = {
+                "query_type": self._identify_query_type(query),
+                "relevant_tasks": self._find_relevant_tasks(query, tasks),
+                "temporal_context": self._get_temporal_context(tasks)
+            }
+            return context
+        except Exception as e:
+            logger.error(f"Error analyzing query context: {e}")
+            return {}
+    
+    def _identify_query_type(self, query: str) -> str:
+        """Identify the type of query being made"""
+        query = query.lower()
+        if any(word in query for word in ["what", "how", "explain"]):
+            return "information"
+        elif any(word in query for word in ["next", "should", "recommend"]):
+            return "recommendation"
+        elif any(word in query for word in ["prioritize", "order", "schedule"]):
+            return "planning"
+        return "general"
+    
+    def _find_relevant_tasks(self, query: str, tasks: List[dict]) -> List[dict]:
+        """Find tasks relevant to the current query"""
+        try:
+            relevant = []
+            query_terms = set(query.lower().split())
+            
+            for task in tasks:
+                task_text = f"{task.get('content', '')} {' '.join(task.get('labels', []))}"
+                task_terms = set(task_text.lower().split())
+                
+                # Calculate relevance score based on term overlap
+                overlap = len(query_terms & task_terms)
+                if overlap > 0:
+                    relevant.append({
+                        "task": task,
+                        "relevance_score": overlap / len(query_terms)
+                    })
+            
+            # Sort by relevance and return top tasks
+            return sorted(relevant, key=lambda x: x["relevance_score"], reverse=True)[:5]
+            
+        except Exception as e:
+            logger.error(f"Error finding relevant tasks: {e}")
+            return []
+    
+    def _get_temporal_context(self, tasks: List[dict]) -> dict:
+        """Get temporal context for the current time"""
+        try:
+            now = datetime.now()
+            return {
+                "hour": now.hour,
+                "day": now.strftime("%A"),
+                "week": now.isocalendar()[1],
+                "active_tasks": len([t for t in tasks if not t.get('completed_at')])
+            }
+        except Exception as e:
+            logger.error(f"Error getting temporal context: {e}")
+            return {}
 
 if __name__ == '__main__':
     main()

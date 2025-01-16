@@ -1,0 +1,417 @@
+{
+  "cache": {
+    "context_1724154272060650648": {
+      "user_query": "ALWAYS REFER TO AND FOLLOW INSTRUCTIONS FROM THE system_prompt.txt FILE WHEN CONSTRUCTING ANSWERS. Always place the suggested tasks at the beginning of the response.\n\ntry again",
+      "repo_info": {
+        "tasks": [
+          {
+            "id": "8716258298",
+            "content": "renew EASD membership before 311224 [15m]",
+            "description": "",
+            "priority": 1,
+            "due": "2024-12-31",
+            "labels": [
+              "NHS_Admin"
+            ],
+            "created_at": 1735387905,
+            "completed_at": 1735406234,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8716546066",
+            "content": "reply to paul anderson re mooring [5m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-04",
+            "labels": [],
+            "created_at": 1735397590,
+            "completed_at": 1735408203,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8412631592",
+            "content": "email to sam neilsen [15m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-29",
+            "labels": [
+              "NHS_Admin",
+              "reclaim"
+            ],
+            "created_at": 1726829511,
+            "completed_at": 1735408805,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8716860796",
+            "content": "EASD membership renewal. consider/renew? [20m]",
+            "description": "",
+            "priority": 1,
+            "due": "2024-12-30",
+            "labels": [],
+            "created_at": 1735407785,
+            "completed_at": 1735478402,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8706649689",
+            "content": "translate TrialEmulation package into python (XV)",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-16",
+            "labels": [
+              "CAUSALFound",
+              "reclaim"
+            ],
+            "created_at": 1734979293,
+            "completed_at": 1735560008,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8631073179",
+            "content": "update the HIC code [240m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-02",
+            "labels": [
+              "Dundee_Colab",
+              "reclaim"
+            ],
+            "created_at": 1732799072,
+            "completed_at": 1735745403,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8725691916",
+            "content": "write HIC update email [30m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-02",
+            "labels": [],
+            "created_at": 1735745233,
+            "completed_at": 1735768804,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8729876029",
+            "content": "test addition of new task",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-03",
+            "labels": [],
+            "created_at": 1735849660,
+            "completed_at": 1735908003,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8631096705",
+            "content": "send NWLondon form back to Kavitha [30m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-04",
+            "labels": [
+              "NWLondon_data",
+              "reclaim"
+            ],
+            "created_at": 1732799621,
+            "completed_at": 1736163604,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8731799935",
+            "content": "new task to test io crontab",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-03",
+            "labels": [],
+            "created_at": 1735907586,
+            "completed_at": 1736163604,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8716551527",
+            "content": "reply to steven bham re eye codes [30m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-05",
+            "labels": [
+              "bham_retina",
+              "reclaim"
+            ],
+            "created_at": 1735397784,
+            "completed_at": 1736172006,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8374260443",
+            "content": "Send Greg EASD form [30min]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-08",
+            "labels": [
+              "NHS_Admin",
+              "reclaim"
+            ],
+            "created_at": 1725862578,
+            "completed_at": 1736178004,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8716547699",
+            "content": "send tax forms [60m] @admin",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-03",
+            "labels": [
+              "reclaim"
+            ],
+            "created_at": 1735397652,
+            "completed_at": 1736179804,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8706648272",
+            "content": "implement diffusion method for causalfound",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-16",
+            "labels": [
+              "CAUSALFound",
+              "reclaim"
+            ],
+            "created_at": 1734979250,
+            "completed_at": 1736181005,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8741830072",
+            "content": "send ID to accountants",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-06",
+            "labels": [],
+            "created_at": 1736179394,
+            "completed_at": 1736181005,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8744732958",
+            "content": "pump form for SP - yvonne patient",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-07",
+            "labels": [],
+            "created_at": 1736243051,
+            "completed_at": 1736272807,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8744638326",
+            "content": "check obsidian sub and cancel [15m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-16",
+            "labels": [
+              "NHS_Admin",
+              "reclaim"
+            ],
+            "created_at": 1736241252,
+            "completed_at": 1736273403,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8751089813",
+            "content": "new task",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-08",
+            "labels": [],
+            "created_at": 1736366776,
+            "completed_at": 1736370603,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8706395925",
+            "content": "draft LPAC form for PRESIDE [120m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-10",
+            "labels": [
+              "PRESIDE",
+              "reclaim"
+            ],
+            "created_at": 1734973111,
+            "completed_at": 1736438406,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8751279247",
+            "content": "order glasses [30m]",
+            "description": "",
+            "priority": 4,
+            "due": "2025-01-09",
+            "labels": [
+              "reclaim"
+            ],
+            "created_at": 1736370520,
+            "completed_at": 1736690255,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8758221458",
+            "content": "complete iso form signoff [30m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-14",
+            "labels": [
+              "mwdh_admin",
+              "reclaim"
+            ],
+            "created_at": 1736529235,
+            "completed_at": 1736762405,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8746324660",
+            "content": "Fwd: ACTION REQUESTED: IUK Precision Meeting Internal Steering Meeting Thursday 16th Jan 2025",
+            "description": "",
+            "priority": 1,
+            "due": null,
+            "labels": [
+              "reclaim"
+            ],
+            "created_at": 1736268278,
+            "completed_at": 1736765404,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8765810716",
+            "content": "send draft LPAC to hartesh [30m]",
+            "description": "",
+            "priority": 1,
+            "due": null,
+            "labels": [
+              "NHSinnovation",
+              "reclaim"
+            ],
+            "created_at": 1736766885,
+            "completed_at": 1736794806,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8767510981",
+            "content": "email LPAC draft to Hartesh and David [15m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-14",
+            "labels": [
+              "PRESIDE",
+              "reclaim"
+            ],
+            "created_at": 1736791755,
+            "completed_at": 1736948403,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8774781172",
+            "content": "write the metamodel code [120m]",
+            "description": "",
+            "priority": 1,
+            "due": null,
+            "labels": [
+              "reclaim"
+            ],
+            "created_at": 1736951844,
+            "completed_at": 1737013804,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8742418534",
+            "content": "generate end to end examples of data from input -> base models -> metamodels -> calibration [360m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-16",
+            "labels": [
+              "MWDH_Metamodels",
+              "reclaim"
+            ],
+            "created_at": 1736186560,
+            "completed_at": 1737016803,
+            "completion_source": "todoist"
+          },
+          {
+            "id": "8716549219",
+            "content": "review CXR paper from greta [60m]",
+            "description": "",
+            "priority": 1,
+            "due": "2025-01-16",
+            "labels": [
+              "VisC",
+              "reclaim"
+            ],
+            "created_at": 1735397704,
+            "completed_at": 1737044403,
+            "completion_source": "todoist"
+          }
+        ],
+        "feedback": {
+          "success_patterns": {
+            "completion_rate": 0.574468085106383,
+            "completed_count": 27,
+            "last_updated": 1737047057,
+            "common_blockers": [],
+            "successful_labels": [
+              "reclaim",
+              "NHS_Admin",
+              "CAUSALFound",
+              "PRESIDE",
+              "Dundee_Colab"
+            ]
+          },
+          "temporal_analysis": {
+            "completions_by_hour": {
+              "0": 0,
+              "1": 0,
+              "2": 0,
+              "3": 0,
+              "4": 0,
+              "5": 0,
+              "6": 0,
+              "7": 0,
+              "8": 0,
+              "9": 0,
+              "10": 0,
+              "11": 2,
+              "12": 2,
+              "13": 1,
+              "14": 1,
+              "15": 2,
+              "16": 3,
+              "17": 2,
+              "18": 3,
+              "19": 0,
+              "20": 0,
+              "21": 0,
+              "22": 1,
+              "23": 0
+            },
+            "completions_by_day": {
+              "0": 8,
+              "1": 2,
+              "2": 2,
+              "3": 0,
+              "4": 1,
+              "5": 3,
+              "6": 1
+            },
+            "last_updated": 1736317673
+          },
+          "action_outcomes": []
+        }
+      }
+    }
+  },
+  "last_update": {
+    "context_1724154272060650648": "2025-01-16T17:36:05.941225"
+  }
+}
